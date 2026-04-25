@@ -295,12 +295,12 @@ export default function TugasHariIni({ profile, onKerjakan }: TugasHariIniProps)
                     </div>
                   </div>
                   <details className="bg-white rounded-lg p-2 mb-1.5 cursor-pointer">
-                    <summary className="text-xs font-semibold text-orange-900">😂 Cara 1 — Bikin Meme (paling gampang)</summary>
-                    <p className="text-xs text-gray-700 mt-1.5 pl-2">Ambil meme viral dari IG/TikTok, post di r/IndonesiaSubs atau r/indonesia_real. Kasih caption lucu pendek. Biasanya dapat 5-50 upvote per post.</p>
+                    <summary className="text-xs font-semibold text-orange-900">🐶 Cara 1 — Post hobby/passion content (paling cepat naik karma)</summary>
+                    <p className="text-xs text-gray-700 mt-1.5 pl-2">Cari konten viral sesuai hobi: foto anjing/kucing lucu (r/dogs, r/cats, r/aww), gaming clips (r/gaming), motor/streetwear (r/motorcycles, r/streetwear), foto food (r/food). Post di subreddit hobby yang relevan — audience global = karma cepat masuk. Hindari posting cuma di r/Indonesia (audience kecil).</p>
                   </details>
                   <details className="bg-white rounded-lg p-2 mb-1.5 cursor-pointer">
-                    <summary className="text-xs font-semibold text-orange-900">🎬 Cara 2 — Repost konten viral IG/TikTok</summary>
-                    <p className="text-xs text-gray-700 mt-1.5 pl-2">Screen-record video TikTok/Reels yang lucu/menarik (no watermark), upload ke r/Indonesia_real atau r/indonesia. Sertakan kredit creator. Karma datang cepat kalau kontennya beneran fresh.</p>
+                    <summary className="text-xs font-semibold text-orange-900">🎬 Cara 2 — Komentar tulus di subreddit passion kamu</summary>
+                    <p className="text-xs text-gray-700 mt-1.5 pl-2">Buka subreddit hobby kamu (r/dogs, r/Kpop, r/gaming, r/motorcycles, dll) → urutkan by Hot. Kasih komentar yang tambah value: pengalaman pribadi, info berguna, atau humor relevan. 5-10 komentar tulus per hari = karma 50-200 dalam seminggu. Jangan spam atau copy-paste.</p>
                   </details>
                   <details className="bg-white rounded-lg p-2 mb-1.5 cursor-pointer">
                     <summary className="text-xs font-semibold text-orange-900">💬 Cara 3 — Komentar Trending</summary>
