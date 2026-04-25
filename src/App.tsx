@@ -1,0 +1,103 @@
+import { useState } from 'react';
+import './index.css';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { Task } from './lib/supabase';
+import LoginScreen from './components/army/LoginScreen';
+import BottomNav, { Page } from './components/army/BottomNav';
+import TugasHariIni from './pages/army/TugasHariIni';
+import KerjakanTask from './pages/army/KerjakanTask';
+import AkunSaya from './pages/army/AkunSaya';
+import Penghasilan from './pages/army/Penghasilan';
+import WithdrawForm from './pages/army/WithdrawForm';
+import AdminShell from './pages/admin/AdminShell';
+import OnboardingFlow from './components/army/OnboardingFlow';
+import Leaderboard from './components/army/Leaderboard';
+
+function AppInner() {
+  const { user, profile, loading, signOut } = useAuth();
+  const [activePage, setActivePage] = useState<Page>('tasks');
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [onboardingDone, setOnboardingDone] = useState(false);
+
+  if (loading) {
+    return (
+      <div
+        className="min-h-screen flex flex-col items-center justify-center"
+        style={{ background: 'linear-gradient(160deg, #1e3a8a 0%, #2563eb 60%, #3b82f6 100%)' }}
+      >
+        <div className="float-animation text-5xl mb-4">⚔️</div>
+        <p className="text-white font-bold text-lg">Reddit Army</p>
+        <p className="text-blue-300 text-sm mt-1">Memuat...</p>
+      </div>
+    );
+  }
+
+  if (!user || !profile) {
+    return <LoginScreen />;
+  }
+
+  if (profile.role === 'admin') {
+    return <AdminShell profile={profile} onSignOut={signOut} />;
+  }
+
+  if (!onboardingDone && !profile.onboarding_completed) {
+    return <OnboardingFlow onComplete={() => setOnboardingDone(true)} />;
+  }
+
+  if (selectedTask) {
+    return (
+      <div className="min-h-screen bg-gray-50 max-w-md mx-auto">
+        <KerjakanTask
+          task={selectedTask}
+          profile={profile}
+          onBack={() => setSelectedTask(null)}
+        />
+      </div>
+    );
+  }
+
+  if (activePage === 'withdraw') {
+    return (
+      <div className="min-h-screen max-w-md mx-auto" style={{ background: '#f0f4ff' }}>
+        <WithdrawForm profile={profile} onBack={() => setActivePage('earnings')} />
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen max-w-md mx-auto relative" style={{ background: '#f0f4ff' }}>
+      <div className="pb-20">
+        {activePage === 'tasks' && (
+          <TugasHariIni
+            profile={profile}
+            onKerjakan={(task) => setSelectedTask(task)}
+          />
+        )}
+        {activePage === 'leaderboard' && (
+          <Leaderboard
+            currentUserId={profile.id}
+          />
+        )}
+        {activePage === 'accounts' && (
+          <AkunSaya profile={profile} onSignOut={signOut} />
+        )}
+        {activePage === 'earnings' && (
+          <Penghasilan profile={profile} onWithdraw={() => setActivePage('withdraw')} />
+        )}
+      </div>
+
+      <BottomNav
+        active={activePage}
+        onChange={setActivePage}
+      />
+    </div>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppInner />
+    </AuthProvider>
+  );
+}
