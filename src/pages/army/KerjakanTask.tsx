@@ -57,13 +57,13 @@ export default function KerjakanTask({ task, profile, onBack }: KerjakanTaskProp
   }
 
   async function handleSubmit() {
-    if (!draftText.trim()) return;
+    // Admin draft is the source of truth; user just clicks submit
     setSubmitting(true);
 
     await supabase.from('task_submissions').insert({
       task_id: task.id,
       submitted_by: profile.id,
-      draft_text: draftText.trim(),
+      draft_text: (draftText.trim() || task.admin_brief || ''),
     });
 
     await supabase
@@ -250,7 +250,7 @@ export default function KerjakanTask({ task, profile, onBack }: KerjakanTaskProp
             <div className="px-4 pb-4">
               <button
                 onClick={handleSubmit}
-                disabled={!draftText.trim() || submitting}
+                disabled={submitting}
                 className="w-full py-3.5 rounded-xl font-black text-base text-white transition-all active:scale-95 disabled:opacity-50"
                 style={{
                   background: draftText.trim() ? 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)' : '#e5e7eb',
