@@ -107,27 +107,16 @@ export default function OnboardingFlow({ onComplete }: { onComplete?: () => void
     setRedditError("");
     const path = "/user/" + username + "/about.json";
     const baseUrl = "https://www.reddit.com" + path;
-    const tryUrls = [
-      "https://api.allorigins.win/raw?url=" + encodeURIComponent(baseUrl),
-      "https://corsproxy.org/?" + encodeURIComponent(baseUrl),
-      "https://api.codetabs.com/v1/proxy?quest=" + encodeURIComponent(baseUrl),
-      "https://thingproxy.freeboard.io/fetch/" + baseUrl,
-      baseUrl,
-      "https://api.reddit.com" + path,
-    ];
-    let lastError = 'NETWORK';
+    const codetabsUrl = "https://api.codetabs.com/v1/proxy?quest=" + encodeURIComponent(baseUrl);
+    const tryUrls = [codetabsUrl, baseUrl, "https://api.reddit.com" + path];
     for (const url of tryUrls) {
       try {
-        const r = await fetch(url, { headers: { "Accept": "application/json" }, signal: AbortSignal.timeout(8000) });
-        const text = await r.text();
-        let j = null;
-        try { j = JSON.parse(text); } catch (parseErr) {}
-        if ((j && j.error === 429) || r.status === 429) { lastError = 'RATE_LIMITED'; continue; }
-        if ((j && j.error === 404) || r.status === 404) { lastError = 'NOT_FOUND'; continue; }
+        const r = await fetch(url, { headers: { "Accept": "application/json" } });
         if (!r.ok) continue;
-        const d = (j && j.data) || j;
-        if (!d || (d.link_karma === undefined && d.comment_karma === undefined && d.total_karma === undefined)) continue;
-        const karma = d.total_karma != null ? d.total_karma : ((d.link_karma || 0) + (d.comment_karma || 0));
+        const j = await r.json();
+        const d = j.data || j;
+        if (!d || (d.link_karma === undefined && d.comment_karma === undefined)) continue;
+        const karma = (d.link_karma || 0) + (d.comment_karma || 0);
         const ageDays = d.created_utc ? Math.floor((Date.now()/1000 - d.created_utc) / 86400) : 0;
         setRedditStats({ username: username, karma: karma, ageDays: ageDays });
         setRedditCheckStatus("ok");
@@ -135,13 +124,7 @@ export default function OnboardingFlow({ onComplete }: { onComplete?: () => void
       } catch (e) { continue; }
     }
     setRedditCheckStatus("error");
-    if (lastError === 'RATE_LIMITED') {
-      setRedditError("Reddit lagi sibuk banget (proxy rate-limited). Tunggu 30 detik terus klik 'Cek Lagi'. Kalau masih ga bisa, coba dari WiFi lain atau aktifin WARP (1.1.1.1).");
-    } else if (lastError === 'NOT_FOUND') {
-      setRedditError("Akun u/" + username + " beneran ga ada di Reddit. Cek spelling usernamenya — case-sensitive ya. Atau pastiin akunnya udah dibuat di reddit.com.");
-    } else {
-      setRedditError("Network gagal. Pastiin koneksi internet stabil + WARP (1.1.1.1) aktif. Coba lagi 1-2x.");
-    }
+    setRedditError("Reddit lagi sibuk atau akun ga valid. Cek spelling usernamenya — case-sensitive ya. Atau coba refresh + tunggu 30 detik. Pastiin juga WARP (1.1.1.1) aktif kalo dari Indonesia.");
     setRedditStats(null);
   }
 
