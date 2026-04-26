@@ -108,10 +108,10 @@ export default function OnboardingFlow({ onComplete }: { onComplete?: () => void
     const path = "/user/" + username + "/about.json";
     const baseUrl = "https://www.reddit.com" + path;
     const tryUrls = [
+      "https://api.codetabs.com/v1/proxy?quest=" + encodeURIComponent(baseUrl),
       "https://api.allorigins.win/raw?url=" + encodeURIComponent(baseUrl),
       "https://corsproxy.org/?" + encodeURIComponent(baseUrl),
       "https://thingproxy.freeboard.io/fetch/" + baseUrl,
-      "https://api.codetabs.com/v1/proxy?quest=" + encodeURIComponent(baseUrl),
       baseUrl,
       "https://api.reddit.com" + path,
     ];
