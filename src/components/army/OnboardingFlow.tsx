@@ -107,8 +107,14 @@ export default function OnboardingFlow({ onComplete }: { onComplete?: () => void
     setRedditError("");
     const path = "/user/" + username + "/about.json";
     const baseUrl = "https://www.reddit.com" + path;
-    const codetabsUrl = "https://api.codetabs.com/v1/proxy?quest=" + encodeURIComponent(baseUrl);
-    const tryUrls = [codetabsUrl, baseUrl, "https://api.reddit.com" + path];
+    const tryUrls = [
+      "https://api.allorigins.win/raw?url=" + encodeURIComponent(baseUrl),
+      "https://corsproxy.org/?" + encodeURIComponent(baseUrl),
+      "https://thingproxy.freeboard.io/fetch/" + baseUrl,
+      "https://api.codetabs.com/v1/proxy?quest=" + encodeURIComponent(baseUrl),
+      baseUrl,
+      "https://api.reddit.com" + path,
+    ];
     for (const url of tryUrls) {
       try {
         const r = await fetch(url, { headers: { "Accept": "application/json" } });
