@@ -318,13 +318,7 @@ export default function TugasHariIni({ profile, onKerjakan }: TugasHariIniProps)
                 <div className="">
                   <TaskCard task={task} onKerjakan={() => onKerjakan(task)} />
                 </div>
-                {!karmaDone && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-white/70 rounded-xl backdrop-blur-[1px]">
-                    <div className="bg-orange-100 border border-orange-300 px-3 py-1.5 rounded-full text-xs font-bold text-orange-800 shadow-sm">
-                      🔒 Selesaikan Bangun Karma dulu
-                    </div>
-                  </div>
-                )}
+                {/* per-task karma gate handled in KerjakanTask */}
               </div>
             ))}
           </div>
