@@ -227,7 +227,7 @@ export default function TugasHariIni({ profile, onKerjakan }: TugasHariIniProps)
             </div>
             <div className="flex-1">
               <p className="text-xs text-blue-500 font-semibold">dari {totalArmy} army</p>
-              <p className="text-sm font-black text-blue-800">{userPoints.toLocaleString('id-ID')} poin total</p>
+              <p className="text-sm font-black text-blue-800">Rp{userPoints.toLocaleString('id-ID')} Penghasilan</p>
             </div>
             <div className="text-xl">⭐</div>
           </div>
@@ -315,8 +315,8 @@ export default function TugasHariIni({ profile, onKerjakan }: TugasHariIniProps)
             </p>
             {tasks.map((task) => (
               <div key={task.id} className="relative">
-                <div className={karmaDone ? '' : 'pointer-events-none opacity-50'}>
-                  <TaskCard task={task} onKerjakan={() => karmaDone && onKerjakan(task)} />
+                <div className="">
+                  <TaskCard task={task} onKerjakan={() => onKerjakan(task)} />
                 </div>
                 {!karmaDone && (
                   <div className="absolute inset-0 flex items-center justify-center bg-white/70 rounded-xl backdrop-blur-[1px]">
