@@ -129,8 +129,22 @@ export default function OnboardingFlow({ onComplete }: { onComplete?: () => void
         return;
       } catch (e) { continue; }
     }
+    // Last-ditch: verify user exists via HTML page (Reddit aggressively rate-limits JSON for low-karma accounts but HTML 200s)
+    try {
+      const htmlUrl = "https://api.codetabs.com/v1/proxy?quest=" + encodeURIComponent("https://www.reddit.com/user/" + username);
+      const hr = await fetch(htmlUrl);
+      if (hr.ok) {
+        const html = await hr.text();
+        if (html.length > 5000 && !html.includes('"error":404') && !html.includes('Sorry, nobody on Reddit goes by that name')) {
+          // User confirmed exists. Accept onboarding with karma=0; can be refreshed later.
+          setRedditStats({ username: username, karma: 0, ageDays: 0 });
+          setRedditCheckStatus("ok");
+          return;
+        }
+      }
+    } catch (htmlErr) {}
     setRedditCheckStatus("error");
-    setRedditError("Reddit lagi sibuk atau akun ga valid. Cek spelling usernamenya — case-sensitive ya. Atau coba refresh + tunggu 30 detik. Pastiin juga WARP (1.1.1.1) aktif kalo dari Indonesia.");
+    setRedditError("Akun u/" + username + " ga ketemu di Reddit, ATAU Reddit lagi rate-limit. Pastiin: (1) spelling bener (case-sensitive), (2) akunnya udah dibuat di reddit.com. Cek manual: reddit.com/user/" + username);
     setRedditStats(null);
   }
 
