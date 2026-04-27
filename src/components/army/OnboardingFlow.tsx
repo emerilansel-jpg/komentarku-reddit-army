@@ -135,7 +135,7 @@ export default function OnboardingFlow({ onComplete }: { onComplete?: () => void
       const hr = await fetch(htmlUrl);
       if (hr.ok) {
         const html = await hr.text();
-        if (html.length > 5000 && !html.includes('"error":404') && !html.includes('Sorry, nobody on Reddit goes by that name')) {
+        if (!html.includes('"error":404') && !html.includes('Sorry, nobody on Reddit goes by that name')) {
           // User confirmed exists. Accept onboarding with karma=0; can be refreshed later.
           setRedditStats({ username: username, karma: 0, ageDays: 0 });
           setRedditCheckStatus("ok");
