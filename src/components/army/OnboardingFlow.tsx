@@ -222,7 +222,7 @@ export default function OnboardingFlow({ onComplete }: { onComplete?: () => void
           {step === 0 && (
             <div className="space-y-4">
               <p className="text-slate-300">
-                Hai! Selamat datang di <b>KomentarKu</b>. Kamu bakal dibayar buat ngerjain misi mudah di Reddit (upvote, komentar, thread).
+                Hai! Selamat datang di <b>PeTa</b>. Kamu bakal dibayar buat ngerjain misi mudah di Reddit (upvote, komentar, thread).
               </p>
               <p className="text-slate-300">
                 Orientasi singkat ini akan kasih kamu <b>{RUPIAH(13000)} gratis</b> sebagai saldo awal. ±3 menit aja.
@@ -246,7 +246,7 @@ export default function OnboardingFlow({ onComplete }: { onComplete?: () => void
             <div className="space-y-4">
               <div className="rounded-lg bg-blue-500/10 border border-blue-400/40 p-3 text-sm text-blue-100">
                 💡 <b>Silakan install WARP dulu baru lanjut ke step berikutnya.</b>
-                <br />Tutup page ini sementara kalau perlu — progress kamu akan tersimpan. Atau buka di device lain: <b>HP untuk WARP + Reddit, laptop untuk KomentarKu</b> (atau sebaliknya).
+                <br />Tutup page ini sementara kalau perlu — progress kamu akan tersimpan. Atau buka di device lain: <b>HP untuk WARP + Reddit, laptop untuk PeTa</b> (atau sebaliknya).
               </div>
               <p className="text-slate-300">
                 Reddit diblokir ISP di Indonesia. Kita pakai <b>Cloudflare WARP (1.1.1.1)</b> — gratis, aman, resmi.
@@ -288,7 +288,7 @@ export default function OnboardingFlow({ onComplete }: { onComplete?: () => void
             <div className="space-y-4">
               <div className="rounded-lg bg-blue-500/10 border border-blue-400/40 p-3 text-sm text-blue-100">
                 💡 <b>Silakan daftar Reddit dulu baru lanjut.</b>
-                <br />Tutup page ini sementara kalau perlu — progress tersimpan. Atau pakai device lain (HP untuk WARP+Reddit, laptop untuk KomentarKu).
+                <br />Tutup page ini sementara kalau perlu — progress tersimpan. Atau pakai device lain (HP untuk WARP+Reddit, laptop untuk PeTa).
               </div>
               <p className="text-slate-300">
                 Tips pilih username: <b>jangan bot-like</b>. Hindari angka random panjang. Pilih interest natural (animals, gaming, news, dll).
