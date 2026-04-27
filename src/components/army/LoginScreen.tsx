@@ -65,7 +65,7 @@ export default function LoginScreen() {
         </div>
 
         <h1 className="text-3xl font-black text-white mb-1 tracking-tight">PeTa</h1>
-        <p className="text-blue-300 text-sm mb-8 font-medium">Platform Manajemen Komentar 🚀</p>
+        <p className="text-blue-300 text-sm mb-8 font-medium">Rp5K-50K/hari dari cuma komen. Bayar ke Gopay/OVO 🚀</p>
 
         <div
           className="w-full rounded-2xl p-5"
