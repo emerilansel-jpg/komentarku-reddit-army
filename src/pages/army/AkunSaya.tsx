@@ -211,7 +211,7 @@ export default function AkunSaya({ profile, onSignOut }: AkunSayaProps) {
     setRedditUrlError('');
     setRedditAccountData(null);
     try {
-      const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(`https://www.reddit.com/user/${username}/about.json`)}`;
+      const proxyUrl = `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(`https://www.reddit.com/user/${username}/about.json`)}`;
       const res = await fetch(proxyUrl, { signal: AbortSignal.timeout(10000) });
       if (!res.ok) throw new Error('not_found');
       const json = await res.json();
