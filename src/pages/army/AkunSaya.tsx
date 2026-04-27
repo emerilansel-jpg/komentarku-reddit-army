@@ -212,9 +212,26 @@ export default function AkunSaya({ profile, onSignOut }: AkunSayaProps) {
     setRedditAccountData(null);
     try {
       const proxyUrl = `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(`https://www.reddit.com/user/${username}/about.json`)}`;
-      const res = await fetch(proxyUrl, { signal: AbortSignal.timeout(10000) });
-      if (!res.ok) throw new Error('not_found');
-      const json = await res.json();
+      let res = null; let json = null;
+      const baseUrl = 'https://www.reddit.com/user/' + username + '/about.json';
+      const tryUrls = [
+        'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(baseUrl),
+        'https://api.allorigins.win/raw?url=' + encodeURIComponent(baseUrl),
+        baseUrl,
+      ];
+      for (const u of tryUrls) {
+        try {
+          const r = await fetch(u, { signal: AbortSignal.timeout(8000) });
+          if (!r.ok) continue;
+          const t = await r.text();
+          if (!t) continue;
+          const j = JSON.parse(t);
+          if (j && j.error) continue;
+          if (!j || !j.data) continue;
+          json = j; res = r; break;
+        } catch (e) { continue; }
+      }
+      if (!json) throw new Error('not_found');
       if (json?.error === 404 || !json?.data) throw new Error('not_found');
       const d = json.data;
       const karma = (d.link_karma || 0) + (d.comment_karma || 0);
