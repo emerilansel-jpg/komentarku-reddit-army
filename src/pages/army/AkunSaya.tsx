@@ -577,7 +577,7 @@ export default function AkunSaya({ profile, onSignOut }: AkunSayaProps) {
           )}
         </div>
         <div className="pb-4">
-          {!showDeleteConfirm ? (
+          {<button onClick={()=>supabase.auth.signOut()} className='w-full py-3.5 rounded-2xl font-bold text-sm text-gray-700 border-2 border-gray-200 bg-gray-50 hover:bg-gray-100 mb-3'>''🚪 Logout''</button> !showDeleteConfirm ? (
             <button
               onClick={() => setShowDeleteConfirm(true)}
               className="w-full py-3.5 rounded-2xl font-bold text-sm text-red-600 border-2 border-red-200 bg-red-50 transition-all active:scale-95 hover:bg-red-100">
