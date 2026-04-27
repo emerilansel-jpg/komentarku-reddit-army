@@ -64,7 +64,7 @@ export default function LoginScreen() {
           </div>
         </div>
 
-        <h1 className="text-3xl font-black text-white mb-1 tracking-tight">KomentarKu</h1>
+        <h1 className="text-3xl font-black text-white mb-1 tracking-tight">PeTa</h1>
         <p className="text-blue-300 text-sm mb-8 font-medium">Platform Manajemen Komentar 🚀</p>
 
         <div
