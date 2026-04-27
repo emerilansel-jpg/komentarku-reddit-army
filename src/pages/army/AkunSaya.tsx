@@ -398,8 +398,8 @@ export default function AkunSaya({ profile, onSignOut }: AkunSayaProps) {
         ) : accounts.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16">
             <div className="text-6xl mb-4 float-animation">🤷</div>
-            <h3 className="text-lg font-bold text-gray-700 mb-2">Belum ada akun</h3>
-            <p className="text-gray-400 text-sm text-center">Pastikan profil Reddit kamu sudah terisi di bawah. Admin akan segera assign akun untukmu.</p>
+            <h3 className="text-lg font-bold text-gray-700 mb-2">{profile?.reddit_url?'Profile ke-verify ':'Belum ada akun'}</h3>
+            <p className="text-gray-400 text-sm text-center">{profile?.reddit_url?'Profile Reddit udah ke-verify. Admin akan assign tugas dalam 24 jam. Sambil nunggu, build karma dulu di tab Tugas Hari Ini.':'Pastikan profil Reddit kamu sudah terisi di bawah. Admin akan segera assign akun untukmu.'}</p>
           </div>
         ) : (
           <div className="flex flex-col gap-4">
