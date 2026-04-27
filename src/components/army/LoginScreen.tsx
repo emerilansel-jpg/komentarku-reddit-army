@@ -71,6 +71,11 @@ export default function LoginScreen() {
           <span className="bg-yellow-500/20 text-yellow-300 text-xs px-3 py-1 rounded-full font-semibold border border-yellow-400/30">💰 Ga ada modal</span>
           <span className="bg-pink-500/20 text-pink-300 text-xs px-3 py-1 rounded-full font-semibold border border-pink-400/30">🔥 Cuan harian</span>
         </div>
+        <div className="bg-gradient-to-r from-emerald-500 to-green-500 px-4 py-3 rounded-xl mt-3 mb-2 text-center shadow-lg">
+          <p className="text-white font-bold text-base">🎁 BONUS Rp50.000 buat pendaftar baru!</p>
+          <p className="text-emerald-50 text-xs mt-0.5">⏰ Sisa slot terbatas — daftar sekarang</p>
+        </div>
+        <a href="https://chat.whatsapp.com/KxYmPXoo8qzJcKlhb4LX5E?mode=gi_t" target="_blank" rel="noopener" className="block w-full bg-green-600 hover:bg-green-700 text-white font-bold text-sm text-center py-3 rounded-xl mb-2 transition-all">📱 Join Grup WA Komunitas PeTa</a>
 
         <div
           className="w-full rounded-2xl p-5"
