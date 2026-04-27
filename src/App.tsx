@@ -26,7 +26,7 @@ function AppInner() {
         style={{ background: 'linear-gradient(160deg, #1e3a8a 0%, #2563eb 60%, #3b82f6 100%)' }}
       >
         <div className="float-animation text-5xl mb-4">⚔️</div>
-        <p className="text-white font-bold text-lg">Reddit Army</p>
+        <p className="text-white font-bold text-lg">PeTa</p>
         <p className="text-blue-300 text-sm mt-1">Memuat...</p>
       </div>
     );
