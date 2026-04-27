@@ -235,7 +235,7 @@ export default function AkunSaya({ profile, onSignOut }: AkunSayaProps) {
         const hr = await fetch(htmlUrl);
         if (hr.ok) {
           const html = await hr.text();
-          if (html.length > 5000 && !html.includes('"error":404') && !html.includes('Sorry, nobody on Reddit goes by that name')) {
+          if (!html.includes('"error":404') && !html.includes('Sorry, nobody on Reddit goes by that name')) {
             setRedditAccountData({ age: '—', karma: 0 });
             await supabase.from('profiles').update({ reddit_url: 'https://www.reddit.com/user/' + username }).eq('id', profile.id);
             setSavingRedditUrl(false);
