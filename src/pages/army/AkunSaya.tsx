@@ -229,7 +229,23 @@ export default function AkunSaya({ profile, onSignOut }: AkunSayaProps) {
       setRedditUrlSaved(true);
       setTimeout(() => setRedditUrlSaved(false), 4000);
     } catch {
-      setRedditUrlError('Akun Reddit tidak ditemukan atau URL tidak valid. Coba lagi.');
+      // Last-ditch: verify user exists via HTML page (Reddit rate-limits JSON for low-karma accounts but HTML 200s)
+      try {
+        const htmlUrl = 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent('https://www.reddit.com/user/' + username);
+        const hr = await fetch(htmlUrl);
+        if (hr.ok) {
+          const html = await hr.text();
+          if (html.length > 5000 && !html.includes('"error":404') && !html.includes('Sorry, nobody on Reddit goes by that name')) {
+            setRedditAccountData({ age: '—', karma: 0 });
+            await supabase.from('profiles').update({ reddit_url: 'https://www.reddit.com/user/' + username }).eq('id', profile.id);
+            setSavingRedditUrl(false);
+            setRedditUrlSaved(true);
+            setTimeout(() => setRedditUrlSaved(false), 4000);
+            return;
+          }
+        }
+      } catch (htmlErr) {}
+      setRedditUrlError('Akun u/' + username + ' ga ketemu di Reddit, ATAU Reddit lagi rate-limit. Cek manual: reddit.com/user/' + username);
     } finally {
       setFetchingRedditData(false);
     }
