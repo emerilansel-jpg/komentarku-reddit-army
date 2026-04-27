@@ -225,7 +225,7 @@ export default function OnboardingFlow({ onComplete }: { onComplete?: () => void
                 Hai! Selamat datang di <b>PeTa</b>. Kamu bakal dibayar buat ngerjain misi mudah di Reddit (upvote, komentar, thread).
               </p>
               <p className="text-slate-300">
-                Orientasi singkat ini akan kasih kamu <b>{RUPIAH(13000)} gratis</b> sebagai saldo awal. ±3 menit aja.
+                Orientasi singkat ini akan kasih kamu <b>{RUPIAH(50000)} gratis</b> sebagai saldo awal. ±3 menit aja.
               </p>
               
               <button
@@ -405,7 +405,7 @@ export default function OnboardingFlow({ onComplete }: { onComplete?: () => void
                 </ul>
                 <div className="mt-3 pt-3 border-t border-emerald-500/30 flex justify-between font-bold text-emerald-300">
                   <span>Total</span>
-                  <span>{RUPIAH(13000)}</span>
+                  <span>{RUPIAH(50000)}</span>
                 </div>
               </div>
               <p className="text-slate-300 text-sm">
