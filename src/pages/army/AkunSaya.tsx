@@ -236,7 +236,7 @@ export default function AkunSaya({ profile, onSignOut }: AkunSayaProps) {
         if (hr.ok) {
           const html = await hr.text();
           if (!html.includes('"error":404') && !html.includes('Sorry, nobody on Reddit goes by that name')) {
-            setRedditAccountData({ age: '—', karma: 0 });
+            setRedditAccountData({ age: '—', karma: '—' });
             await supabase.from('profiles').update({ reddit_url: 'https://www.reddit.com/user/' + username }).eq('id', profile.id);
             setSavingRedditUrl(false);
             setRedditUrlSaved(true);
@@ -435,7 +435,7 @@ export default function AkunSaya({ profile, onSignOut }: AkunSayaProps) {
               </div>
               <div className="flex-1 rounded-xl px-3 py-2 text-center" style={{ background: '#f0fdf4', border: '1px solid #bbf7d0' }}>
                 <p className="text-xs text-emerald-400 font-medium">Total Karma</p>
-                <p className="text-sm font-black text-emerald-600">{redditAccountData.karma.toLocaleString()}</p>
+                <p className="text-sm font-black text-emerald-600">{typeof redditAccountData.karma === 'number' ? redditAccountData.karma.toLocaleString() : redditAccountData.karma}</p>
               </div>
             </div>
           )}
