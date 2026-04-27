@@ -47,7 +47,7 @@ export default function LoginScreen() {
 
   return (
     <div
-      className="min-h-screen flex flex-col items-center justify-center px-6"
+      className="min-h-screen flex flex-col items-center justify-start pt-10 pb-8 px-4"
       style={{ background: 'linear-gradient(160deg, #0f172a 0%, #1e3a8a 50%, #1d4ed8 100%)' }}
     >
       <div className="w-full max-w-sm flex flex-col items-center">
@@ -64,8 +64,13 @@ export default function LoginScreen() {
           </div>
         </div>
 
-        <h1 className="text-3xl font-black text-white mb-1 tracking-tight">PeTa</h1>
+        <h1 className="text-5xl font-black text-white mb-2 tracking-tight">PeTa</h1>
         <p className="text-blue-300 text-sm mb-8 font-medium">Rp5K-50K/hari dari cuma komen. Bayar ke Gopay/OVO 🚀</p>
+        <div className="flex flex-wrap gap-2 justify-center mt-3 mb-4">
+          <span className="bg-green-500/20 text-green-300 text-xs px-3 py-1 rounded-full font-semibold border border-green-400/30">✅ Gratis daftar</span>
+          <span className="bg-yellow-500/20 text-yellow-300 text-xs px-3 py-1 rounded-full font-semibold border border-yellow-400/30">💰 Ga ada modal</span>
+          <span className="bg-pink-500/20 text-pink-300 text-xs px-3 py-1 rounded-full font-semibold border border-pink-400/30">🔥 Cuan harian</span>
+        </div>
 
         <div
           className="w-full rounded-2xl p-5"
