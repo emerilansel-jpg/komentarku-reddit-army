@@ -18,6 +18,7 @@ export type Profile = {
   login_streak?: number;
   last_login_date?: string | null;
   reddit_url?: string | null;
+  whatsapp_number?: string | null;
 };
 
 export type RedditAccount = {

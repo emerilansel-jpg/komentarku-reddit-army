@@ -150,15 +150,11 @@ export default function OnboardingFlow({ onComplete }: { onComplete?: () => void
 
   const handleFinish = async () => {
     if (!user) return;
-    await supabase
-      .from('army_profiles')
-      .update({
-        onboarding_completed: true,
-        onboarding_step: STEPS.length - 1,
-        display_name: displayName.trim() || undefined,
-        reddit_profile_url: redditUrl.trim() || undefined,
-      })
-      .eq('user_id', user.id);
+    // Save to profiles table (army_profiles is a VIEW — writes fail silently)
+    const updateData: Record<string, unknown> = { onboarding_completed: true };
+    if (displayName.trim()) updateData.display_name = displayName.trim();
+    if (redditUrl.trim()) updateData.reddit_url = redditUrl.trim();
+    await supabase.from('profiles').update(updateData).eq('id', user.id);
     await awardQuickWin(user.id, 'profile_complete', QUICK_WIN_POINTS.profile_complete, 'Orientasi selesai!');
     fire();
     onComplete?.();

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase, RedditAccount, Profile } from '../../lib/supabase';
+import { useAuth } from '../../contexts/AuthContext';
 import { getLevelInfo, getKarmaProgress, LEVELS, formatRate } from '../../lib/gamification';
 import { refreshAccountKarma, shouldRefreshKarma } from '../../lib/karmaFetch';
 import LevelUpModal from '../../components/army/LevelUpModal';
@@ -73,6 +74,7 @@ const FEEDBACK_TYPES = [
 ];
 
 export default function AkunSaya({ profile, onSignOut }: AkunSayaProps) {
+  const { refreshProfile } = useAuth();
   const [accounts, setAccounts] = useState<RedditAccount[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState<string | null>(null);
@@ -98,6 +100,9 @@ export default function AkunSaya({ profile, onSignOut }: AkunSayaProps) {
 
   const [userEmail, setUserEmail] = useState('');
   const [whatsappNumber, setWhatsappNumber] = useState('');
+  const [editingName, setEditingName] = useState(false);
+  const [newName, setNewName] = useState(profile.display_name || '');
+  const [savingName, setSavingName] = useState(false);
 
   useEffect(() => {
     loadAccounts();
@@ -159,12 +164,12 @@ export default function AkunSaya({ profile, onSignOut }: AkunSayaProps) {
   }
 
   async function loadProfileDetails() {
-    const [{ data: { user } }, { data: armyProfile }] = await Promise.all([
+    const [{ data: { user } }, { data: profileData }] = await Promise.all([
       supabase.auth.getUser(),
-      supabase.from('army_profiles').select('whatsapp_number').eq('user_id', profile.id).maybeSingle(),
+      supabase.from('profiles').select('whatsapp_number').eq('id', profile.id).maybeSingle(),
     ]);
     if (user?.email) setUserEmail(user.email);
-    if (armyProfile?.whatsapp_number) setWhatsappNumber(armyProfile.whatsapp_number);
+    if (profileData?.whatsapp_number) setWhatsappNumber(profileData.whatsapp_number);
   }
 
   async function loadAccounts() {
@@ -258,6 +263,7 @@ export default function AkunSaya({ profile, onSignOut }: AkunSayaProps) {
       setSavingRedditUrl(false);
       setRedditUrlSaved(true);
       setTimeout(() => setRedditUrlSaved(false), 4000);
+      await refreshProfile();
     } catch {
       // Last-ditch: verify user exists via HTML page (Reddit rate-limits JSON for low-karma accounts but HTML 200s)
       try {
@@ -271,6 +277,7 @@ export default function AkunSaya({ profile, onSignOut }: AkunSayaProps) {
             setSavingRedditUrl(false);
             setRedditUrlSaved(true);
             setTimeout(() => setRedditUrlSaved(false), 4000);
+            await refreshProfile();
             return;
           }
         }
@@ -279,6 +286,15 @@ export default function AkunSaya({ profile, onSignOut }: AkunSayaProps) {
     } finally {
       setFetchingRedditData(false);
     }
+  }
+
+  async function handleSaveName() {
+    if (!newName.trim()) return;
+    setSavingName(true);
+    await supabase.from('profiles').update({ display_name: newName.trim() }).eq('id', profile.id);
+    setSavingName(false);
+    setEditingName(false);
+    await refreshProfile();
   }
 
   async function handleFeedbackSubmit(e: React.FormEvent) {
@@ -367,7 +383,26 @@ export default function AkunSaya({ profile, onSignOut }: AkunSayaProps) {
               <span className="text-base">🏷️</span>
               <div className="flex-1 min-w-0">
                 <p className="text-xs text-gray-400 font-medium">Nama</p>
-                <p className="text-sm font-bold text-gray-800 truncate">{profile.display_name || '—'}</p>
+                {editingName ? (
+                  <div className="flex items-center gap-1.5 mt-1">
+                    <input
+                      type="text"
+                      value={newName}
+                      onChange={e => setNewName(e.target.value)}
+                      className="flex-1 text-sm border border-emerald-300 rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-emerald-400"
+                      autoFocus
+                    />
+                    <button onClick={handleSaveName} disabled={savingName} className="text-xs font-bold text-emerald-600 px-2 py-1 rounded-lg bg-emerald-50 border border-emerald-200 disabled:opacity-50">
+                      {savingName ? '...' : '✓'}
+                    </button>
+                    <button onClick={() => { setEditingName(false); setNewName(profile.display_name || ''); }} className="text-xs text-gray-400 px-1.5 py-1 rounded-lg">✕</button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-bold text-gray-800 truncate">{profile.display_name || '—'}</p>
+                    <button onClick={() => setEditingName(true)} className="text-[10px] text-emerald-500 font-bold underline">Edit</button>
+                  </div>
+                )}
               </div>
             </div>
             <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-gray-50">

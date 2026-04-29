@@ -9,6 +9,7 @@ interface AuthContextValue {
   signIn: (email: string, password: string) => Promise<string | null>;
   signUp: (email: string, password: string, displayName: string, whatsappNumber?: string) => Promise<string | null>;
   signOut: () => Promise<void>;
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -40,6 +41,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  async function refreshProfile() {
+    if (user) await loadProfile(user.id);
+  }
 
   async function loadProfile(userId: string) {
     const { data } = await supabase
@@ -80,12 +85,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setLoading(false);
         return profileError.message;
       }
-      // Save whatsapp number to army_profiles if provided
+      // Save whatsapp number to profiles
       if (whatsappNumber) {
-        await supabase.from('army_profiles').upsert({
-          user_id: data.user.id,
+        await supabase.from('profiles').update({
           whatsapp_number: whatsappNumber,
-        }, { onConflict: 'user_id' });
+        }).eq('id', data.user.id);
       }
       await loadProfile(data.user.id);
       // Sync to Google Sheet (fire-and-forget, never block auth)
@@ -111,7 +115,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, signIn, signUp, signOut }}>
+    <AuthContext.Provider value={{ user, profile, loading, signIn, signUp, signOut, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   );
