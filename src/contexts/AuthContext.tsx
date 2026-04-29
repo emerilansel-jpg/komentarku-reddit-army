@@ -85,7 +85,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await supabase.from('army_profiles').upsert({
           user_id: data.user.id,
           whatsapp_number: whatsappNumber,
-        });
+        }, { onConflict: 'user_id' });
       }
       await loadProfile(data.user.id);
       // Sync to Google Sheet (fire-and-forget, never block auth)
@@ -97,7 +97,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   function triggerGSheetSync() {
     const url = import.meta.env.VITE_GSHEET_WEBHOOK_URL;
     if (!url) return;
-    // Fire-and-forget: GAS v3 pulls fresh data from Supabase — triggers syncProfilesOnly
+    // Fire-and-forget: GAS v3 pulls fresh data from Supabase â triggers syncProfilesOnly
     fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
