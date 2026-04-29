@@ -457,11 +457,43 @@ export default function AkunSaya({ profile, onSignOut }: AkunSayaProps) {
             ))}
           </div>
         ) : accounts.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16">
-            <div className="text-6xl mb-4 float-animation">🤷</div>
-            <h3 className="text-lg font-bold text-gray-700 mb-2">{profile?.reddit_url?'Profile ke-verify ':'Belum ada akun'}</h3>
-            <p className="text-gray-400 text-sm text-center">{profile?.reddit_url?'Profile Reddit udah ke-verify. Admin akan assign tugas dalam 24 jam. Sambil nunggu, build karma dulu di tab Tugas Hari Ini.':'Pastikan profil Reddit kamu sudah terisi di bawah. Admin akan segera assign akun untukmu.'}</p>
-          </div>
+          redditUrl.trim() ? (
+            <div className="bg-white rounded-2xl p-4 shadow-sm" style={{ boxShadow: '0 2px 16px rgba(0,0,0,0.07)' }}>
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-3xl"
+                  style={{ background: 'linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%)', border: '2px solid #fed7aa' }}>
+                  🔗
+                </div>
+                <div>
+                  <p className="font-black text-gray-800 text-base">u/{extractRedditUsername(redditUrl) || 'unknown'}</p>
+                  <span className="inline-flex items-center text-xs font-bold px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+                    🕐 Menunggu Assign
+                  </span>
+                </div>
+              </div>
+              {redditAccountData && (
+                <div className="grid grid-cols-2 gap-2 mb-3">
+                  <div className="rounded-xl p-2.5 text-center" style={{ background: '#fff7ed' }}>
+                    <p className="font-black text-orange-600 text-sm">
+                      {typeof redditAccountData.karma === 'number' ? redditAccountData.karma.toLocaleString() : String(redditAccountData.karma)}
+                    </p>
+                    <p className="text-xs text-orange-400 font-medium">Karma</p>
+                  </div>
+                  <div className="rounded-xl p-2.5 text-center" style={{ background: '#f0fdf4' }}>
+                    <p className="font-black text-emerald-600 text-sm">{redditAccountData.age}</p>
+                    <p className="text-xs text-emerald-400 font-medium">Usia Akun</p>
+                  </div>
+                </div>
+              )}
+              <p className="text-xs text-gray-400 text-center mt-1">Admin akan assign akun dalam 24 jam 👍</p>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-16">
+              <div className="text-6xl mb-4 float-animation">🤷</div>
+              <h3 className="text-lg font-bold text-gray-700 mb-2">Belum ada akun</h3>
+              <p className="text-gray-400 text-sm text-center">Pastikan profil Reddit kamu sudah terisi di bawah. Admin akan segera assign akun untukmu.</p>
+            </div>
+          )
         ) : (
           <div className="flex flex-col gap-4">
             {accounts.map((account) => (
