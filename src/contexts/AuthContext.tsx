@@ -88,8 +88,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         });
       }
       await loadProfile(data.user.id);
+      // Sync to Google Sheet (fire-and-forget, never block auth)
+      syncToGSheet({
+        email,
+        displayName,
+        whatsappNumber: whatsappNumber || '',
+        userId: data.user.id,
+        signupAt: new Date().toISOString(),
+      }).catch(() => {/* ignore */});
     }
     return null;
+  }
+
+  function syncToGSheet(payload: {
+    email: string;
+    displayName: string;
+    whatsappNumber: string;
+    userId: string;
+    signupAt: string;
+  }) {
+    const url = import.meta.env.VITE_GSHEET_WEBHOOK_URL;
+    if (!url) return Promise.resolve();
+    return fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      mode: 'no-cors', // Apps Script requires no-cors
+    });
   }
 
   async function signOut() {
