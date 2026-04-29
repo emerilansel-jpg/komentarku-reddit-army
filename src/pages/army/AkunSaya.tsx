@@ -96,9 +96,13 @@ export default function AkunSaya({ profile, onSignOut }: AkunSayaProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
+  const [userEmail, setUserEmail] = useState('');
+  const [whatsappNumber, setWhatsappNumber] = useState('');
+
   useEffect(() => {
     loadAccounts();
     loadRankData();
+    loadProfileDetails();
   }, [profile.id]);
 
   useEffect(() => {
@@ -152,6 +156,15 @@ export default function AkunSaya({ profile, onSignOut }: AkunSayaProps) {
       loginStreak,
       recentWins: recentWins || [],
     });
+  }
+
+  async function loadProfileDetails() {
+    const [{ data: { user } }, { data: armyProfile }] = await Promise.all([
+      supabase.auth.getUser(),
+      supabase.from('army_profiles').select('whatsapp_number').eq('user_id', profile.id).maybeSingle(),
+    ]);
+    if (user?.email) setUserEmail(user.email);
+    if (armyProfile?.whatsapp_number) setWhatsappNumber(armyProfile.whatsapp_number);
   }
 
   async function loadAccounts() {
@@ -291,7 +304,11 @@ export default function AkunSaya({ profile, onSignOut }: AkunSayaProps) {
 
   async function handleDeleteAccount() {
     setDeleting(true);
-    await supabase.from('profiles').delete().eq('id', profile.id);
+    try {
+      await supabase.rpc('delete_my_account');
+    } catch (e) {
+      // Fallback: even if RPC fails, sign out
+    }
     await supabase.auth.signOut();
     onSignOut();
   }
@@ -343,6 +360,33 @@ export default function AkunSaya({ profile, onSignOut }: AkunSayaProps) {
       </div>
 
       <div className="flex-1 px-4 py-4 space-y-4">
+        <div className="bg-white rounded-2xl p-4 shadow-sm" style={{ boxShadow: '0 2px 16px rgba(0,0,0,0.07)' }}>
+          <p className="text-sm font-black text-gray-800 mb-3">👤 Profil Saya</p>
+          <div className="space-y-2.5">
+            <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-gray-50">
+              <span className="text-base">🏷️</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-gray-400 font-medium">Nama</p>
+                <p className="text-sm font-bold text-gray-800 truncate">{profile.display_name || '—'}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-gray-50">
+              <span className="text-base">📧</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-gray-400 font-medium">Email</p>
+                <p className="text-sm font-bold text-gray-800 truncate">{userEmail || '—'}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-gray-50">
+              <span className="text-base">📱</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-gray-400 font-medium">WhatsApp</p>
+                <p className="text-sm font-bold text-gray-800">{whatsappNumber || '—'}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {rankData && (
           <div className="bg-white rounded-2xl p-4 shadow-sm" style={{ boxShadow: '0 2px 16px rgba(0,0,0,0.07)' }}>
             <div className="flex items-center gap-2 mb-3">
