@@ -97,7 +97,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   function triggerGSheetSync() {
     const url = import.meta.env.VITE_GSHEET_WEBHOOK_URL;
     if (!url) return;
-    // Fire-and-forget: GAS v3 pulls fresh data from Supabase on receiving this trigger
+    // Fire-and-forget: GAS v3 pulls fresh data from Supabase — triggers syncProfilesOnly
     fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
