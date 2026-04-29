@@ -11,10 +11,10 @@ type StepDef = {
 };
 
 const STEPS: StepDef[] = [
-  { key: 'welcome',   title: 'Selamat Datang!',           bonus: 5000 },
-  { key: 'warp',      title: 'Pasang Cloudflare WARP',    bonus: 3000 },
-  { key: 'reddit',    title: 'Buat Akun Reddit',          bonus: 3000 },
-  { key: 'redditUrl', title: 'URL Profil Reddit Kamu',    bonus: 2000 },
+  { key: 'welcome',   title: 'Selamat Datang!',           bonus: 25000 },
+  { key: 'warp',      title: 'Pasang Cloudflare WARP',    bonus: 10000 },
+  { key: 'reddit',    title: 'Buat Akun Reddit',          bonus: 10000 },
+  { key: 'redditUrl', title: 'URL Profil Reddit Kamu',    bonus: 5000 },
   { key: 'done',      title: 'Orientasi Selesai!',        bonus: 0    },
 ];
 
@@ -233,7 +233,7 @@ export default function OnboardingFlow({ onComplete }: { onComplete?: () => void
                 disabled={false}
                 className="w-full bg-emerald-500 hover:bg-emerald-400 disabled:opacity-40 text-slate-900 font-bold py-4 px-5 rounded-xl text-lg transition animate-pulse-slow"
               >
-                🚀 Klaim Bonus {RUPIAH(16000)} Sekarang!
+                🚀 Klaim Bonus {RUPIAH(25000)} Sekarang!
               </button>
               <div className="text-center text-xs text-slate-400">
                 Gratis untuk semua anggota baru • ±3 menit selesai
@@ -398,10 +398,10 @@ export default function OnboardingFlow({ onComplete }: { onComplete?: () => void
               <div className="bg-emerald-500/10 border border-emerald-500/40 rounded-xl p-4 text-left">
                 <div className="text-sm text-slate-300 mb-2">Bonus kamu:</div>
                 <ul className="text-sm space-y-1">
-                  <li>• Welcome: +{RUPIAH(5000)}</li>
-                  <li>• Pasang WARP: +{RUPIAH(3000)}</li>
-                  <li>• Daftar Reddit: +{RUPIAH(3000)}</li>
-                  <li>• URL profil Reddit: +{RUPIAH(2000)}</li>
+                  <li>• Welcome: +{RUPIAH(25000)}</li>
+                  <li>• Pasang WARP: +{RUPIAH(10000)}</li>
+                  <li>• Daftar Reddit: +{RUPIAH(10000)}</li>
+                  <li>• URL profil Reddit: +{RUPIAH(5000)}</li>
                 </ul>
                 <div className="mt-3 pt-3 border-t border-emerald-500/30 flex justify-between font-bold text-emerald-300">
                   <span>Total</span>
