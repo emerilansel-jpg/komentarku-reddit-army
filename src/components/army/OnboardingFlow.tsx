@@ -33,7 +33,7 @@ export default function OnboardingFlow({ onComplete }: { onComplete?: () => void
   const [redditCheckStatus, setRedditCheckStatus] = useState("idle");
   const [redditStats, setRedditStats] = useState(null);
   const [redditError, setRedditError] = useState("");
-  const [waNumber, setWaNumber] = useState("");
+
 
   // --- Resume state: load onboarding_step from Supabase ---
   useEffect(() => {
@@ -157,7 +157,6 @@ export default function OnboardingFlow({ onComplete }: { onComplete?: () => void
         onboarding_step: STEPS.length - 1,
         display_name: displayName.trim() || undefined,
         reddit_profile_url: redditUrl.trim() || undefined,
-        whatsapp_number: waNumber || null,
       })
       .eq('user_id', user.id);
     await awardQuickWin(user.id, 'profile_complete', QUICK_WIN_POINTS.profile_complete, 'Orientasi selesai!');
@@ -348,16 +347,7 @@ export default function OnboardingFlow({ onComplete }: { onComplete?: () => void
               {redditCheckStatus === "error" && (
                 <div className="text-sm text-red-300">❌ {redditError}</div>
               )}
-              <div>
-                <label className="block text-sm text-slate-300 mb-1">Nomor WhatsApp (opsional, untuk admin contact)</label>
-                <input
-                  type="tel"
-                  value={waNumber}
-                  onChange={(e) => setWaNumber(e.target.value)}
-                  placeholder="08123456789"
-                  className="w-full px-4 py-3 rounded-xl bg-slate-800/50 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:border-orange-500"
-                />
-              </div>
+
             </div>
               {error && <div className="text-red-400 text-sm">{error}</div>}
               <button

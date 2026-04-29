@@ -9,6 +9,7 @@ export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
+  const [waNumber, setWaNumber] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -26,7 +27,7 @@ export default function LoginScreen() {
         setSubmitting(false);
         return;
       }
-      err = await signUp(email, password, displayName.trim());
+      err = await signUp(email, password, displayName.trim(), waNumber.trim() || undefined);
     }
 
     if (err) {
@@ -41,6 +42,7 @@ export default function LoginScreen() {
     setEmail('');
     setPassword('');
     setDisplayName('');
+    setWaNumber('');
   }
 
   const isLoading = loading || submitting;
@@ -112,18 +114,31 @@ export default function LoginScreen() {
 
           <form onSubmit={handleSubmit} className="space-y-3">
             {mode === 'register' && (
-              <div>
-                <label className="block text-xs font-semibold text-blue-200 mb-1">Nama Tampilan</label>
-                <input
-                  type="text"
-                  value={displayName}
-                  onChange={e => setDisplayName(e.target.value)}
-                  placeholder="Nama kamu..."
-                  required
-                  className="w-full rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-blue-300 outline-none focus:ring-2 focus:ring-blue-400"
-                  style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)' }}
-                />
-              </div>
+              <>
+                <div>
+                  <label className="block text-xs font-semibold text-blue-200 mb-1">Nama Tampilan</label>
+                  <input
+                    type="text"
+                    value={displayName}
+                    onChange={e => setDisplayName(e.target.value)}
+                    placeholder="Nama kamu..."
+                    required
+                    className="w-full rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-blue-300 outline-none focus:ring-2 focus:ring-blue-400"
+                    style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)' }}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-blue-200 mb-1">Nomor WhatsApp <span className="text-blue-400 font-normal">(opsional)</span></label>
+                  <input
+                    type="tel"
+                    value={waNumber}
+                    onChange={e => setWaNumber(e.target.value)}
+                    placeholder="08123456789"
+                    className="w-full rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-blue-300 outline-none focus:ring-2 focus:ring-blue-400"
+                    style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)' }}
+                  />
+                </div>
+              </>
             )}
 
             <div>

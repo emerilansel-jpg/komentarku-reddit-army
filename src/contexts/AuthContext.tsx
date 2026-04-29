@@ -7,7 +7,7 @@ interface AuthContextValue {
   profile: Profile | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<string | null>;
-  signUp: (email: string, password: string, displayName: string) => Promise<string | null>;
+  signUp: (email: string, password: string, displayName: string, whatsappNumber?: string) => Promise<string | null>;
   signOut: () => Promise<void>;
 }
 
@@ -61,7 +61,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return null;
   }
 
-  async function signUp(email: string, password: string, displayName: string): Promise<string | null> {
+  async function signUp(email: string, password: string, displayName: string, whatsappNumber?: string): Promise<string | null> {
     setLoading(true);
     const { data, error } = await supabase.auth.signUp({ email, password });
     if (error) {
@@ -79,6 +79,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (profileError) {
         setLoading(false);
         return profileError.message;
+      }
+      // Save whatsapp number to army_profiles if provided
+      if (whatsappNumber) {
+        await supabase.from('army_profiles').upsert({
+          user_id: data.user.id,
+          whatsapp_number: whatsappNumber,
+        });
       }
       await loadProfile(data.user.id);
     }
