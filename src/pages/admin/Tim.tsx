@@ -93,12 +93,15 @@ export default function Tim() {
           <h1 style={{ fontSize: 24, fontWeight: 900, color: '#0f172a', margin: 0 }}>Tim</h1>
           <p style={{ color: '#64748b', marginTop: 4, fontSize: 14 }}>{members.length} anggota aktif</p>
         </div>
-        <button onClick={handleCopyInvite} style={{ padding: '9px 20px', borderRadius: 10, border: 'none', cursor: 'pointer', background: inviteCopied ? '#dcfce7' : '#0f172a', color: inviteCopied ? '#15803d' : 'white', fontSize: 13, fontWeight: 700 }}>
+        <button
+          onClick={handleCopyInvite}
+          style={{ padding: '9px 20px', borderRadius: 10, border: 'none', cursor: 'pointer', background: inviteCopied ? '#dcfce7' : '#0f172a', color: inviteCopied ? '#15803d' : 'white', fontSize: 13, fontWeight: 700 }}>
           {inviteCopied ? '✅ Link Tersalin!' : '+ Undang Anggota'}
         </button>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: selected ? '1fr 380px' : '1fr', gap: 20 }}>
+        {/* Member Table */}
         <div style={{ background: 'white', borderRadius: 14, boxShadow: '0 1px 8px rgba(0,0,0,0.06)', overflow: 'hidden' }}>
           {loading ? (
             <div style={{ padding: 60, textAlign: 'center', color: '#94a3b8' }}>Memuat...</div>
@@ -109,11 +112,13 @@ export default function Tim() {
             </div>
           ) : (
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead><tr style={{ background: '#f8fafc' }}>
-                {['Anggota', 'Level', 'Akun Reddit', 'Misi Selesai', 'Pendapatan Bulan Ini', 'Bergabung', ''].map(h => (
-                  <th key={h} style={{ padding: '11px 20px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>{h}</th>
-                ))}
-              </tr></thead>
+              <thead>
+                <tr style={{ background: '#f8fafc' }}>
+                  {['Anggota', 'Level', 'Akun Reddit', 'Misi Selesai', 'Pendapatan Bulan Ini', 'Bergabung', ''].map(h => (
+                    <th key={h} style={{ padding: '11px 20px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
               <tbody>
                 {members.map((member, i) => {
                   const isSelected = selected?.profile.id === member.id;
@@ -121,17 +126,26 @@ export default function Tim() {
                     <tr key={member.id} style={{ borderTop: i > 0 ? '1px solid #f1f5f9' : 'none', background: isSelected ? '#f0f9ff' : 'transparent', cursor: 'pointer' }}
                       onClick={() => loadMemberDetail(member.id)}
                       onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = '#f8fafc'; }}
-                      onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = 'transparent'; }}>
-                      <td style={{ padding: '13px 20px' }}><div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <div style={{ width: 32, height: 32, borderRadius: 10, background: 'linear-gradient(135deg,#1e3a8a,#2563eb)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: 14, fontWeight: 800, flexShrink: 0 }}>{member.display_name.slice(0, 1)}</div>
-                        <span style={{ fontSize: 13, fontWeight: 700, color: '#1e293b' }}>{member.display_name}</span>
-                      </div></td>
+                      onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = 'transparent'; }}
+                    >
+                      <td style={{ padding: '13px 20px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                          <div style={{ width: 32, height: 32, borderRadius: 10, background: 'linear-gradient(135deg,#1e3a8a,#2563eb)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: 14, fontWeight: 800, flexShrink: 0 }}>
+                            {member.display_name.slice(0, 1)}
+                          </div>
+                          <span style={{ fontSize: 13, fontWeight: 700, color: '#1e293b' }}>{member.display_name}</span>
+                        </div>
+                      </td>
                       <td style={{ padding: '13px 20px', fontSize: 14 }}>{member.topLevelEmoji} Lv.{member.topLevel}</td>
                       <td style={{ padding: '13px 20px', fontSize: 13, fontWeight: 700, color: '#6366f1', textAlign: 'center' }}>{member.accountCount}</td>
                       <td style={{ padding: '13px 20px', fontSize: 13, fontWeight: 700, color: '#059669', textAlign: 'center' }}>{member.tasksCompleted}</td>
-                      <td style={{ padding: '13px 20px', fontSize: 13, fontWeight: 700, color: '#d97706' }}>{member.monthEarnings > 0 ? `Rp${(member.monthEarnings / 1000).toFixed(0)}rb` : '—'}</td>
+                      <td style={{ padding: '13px 20px', fontSize: 13, fontWeight: 700, color: '#d97706' }}>
+                        {member.monthEarnings > 0 ? `Rp${(member.monthEarnings / 1000).toFixed(0)}rb` : '—'}
+                      </td>
                       <td style={{ padding: '13px 20px', fontSize: 12, color: '#94a3b8' }}>{formatDate(member.created_at)}</td>
-                      <td style={{ padding: '13px 20px' }}><span style={{ fontSize: 12, color: '#6366f1', fontWeight: 600 }}>Detail →</span></td>
+                      <td style={{ padding: '13px 20px' }}>
+                        <span style={{ fontSize: 12, color: '#6366f1', fontWeight: 600 }}>Detail →</span>
+                      </td>
                     </tr>
                   );
                 })}
@@ -139,7 +153,15 @@ export default function Tim() {
             </table>
           )}
         </div>
-        {selected && <MemberDetailPanel detail={selected} loading={detailLoading} onClose={() => setSelected(null)} />}
+
+        {/* Detail Panel */}
+        {selected && (
+          <MemberDetailPanel
+            detail={selected}
+            loading={detailLoading}
+            onClose={() => setSelected(null)}
+          />
+        )}
       </div>
     </div>
   );
@@ -149,18 +171,25 @@ function MemberDetailPanel({ detail, loading, onClose }: { detail: MemberDetail;
   const [tab, setTab] = useState<'accounts' | 'earnings' | 'tasks'>('accounts');
   const totalEarnings = detail.earnings.reduce((s, e) => s + e.amount, 0);
   const paidEarnings = detail.earnings.filter(e => e.status === 'paid').reduce((s, e) => s + e.amount, 0);
+
   return (
     <div style={{ background: 'white', borderRadius: 14, boxShadow: '0 1px 8px rgba(0,0,0,0.06)', overflow: 'hidden', height: 'fit-content', position: 'sticky', top: 20 }}>
+      {/* Header */}
       <div style={{ padding: '16px 20px', borderBottom: '1px solid #f1f5f9' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ width: 38, height: 38, borderRadius: 12, background: 'linear-gradient(135deg,#1e3a8a,#2563eb)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: 16, fontWeight: 800 }}>{detail.profile.display_name.slice(0, 1)}</div>
+            <div style={{ width: 38, height: 38, borderRadius: 12, background: 'linear-gradient(135deg,#1e3a8a,#2563eb)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: 16, fontWeight: 800 }}>
+              {detail.profile.display_name.slice(0, 1)}
+            </div>
             <div>
               <p style={{ fontSize: 15, fontWeight: 800, color: '#0f172a', margin: 0 }}>{detail.profile.display_name}</p>
               <p style={{ fontSize: 11, color: '#94a3b8', margin: 0 }}>{detail.accounts.length} akun · {detail.tasks.filter(t => t.status === 'posted').length} misi selesai</p>
             </div>
           </div>
-          <button onClick={onClose} style={{ width: 28, height: 28, borderRadius: 8, border: 'none', background: '#f1f5f9', color: '#64748b', cursor: 'pointer', fontWeight: 700, fontSize: 14 }}>×</button>
+          <button onClick={onClose}
+            style={{ width: 28, height: 28, borderRadius: 8, border: 'none', background: '#f1f5f9', color: '#64748b', cursor: 'pointer', fontWeight: 700, fontSize: 14 }}>
+            ×
+          </button>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
           <div style={{ background: '#f0fdf4', borderRadius: 10, padding: '8px 12px', textAlign: 'center' }}>
@@ -173,15 +202,27 @@ function MemberDetailPanel({ detail, loading, onClose }: { detail: MemberDetail;
           </div>
         </div>
       </div>
+
+      {/* Tabs */}
       <div style={{ display: 'flex', borderBottom: '1px solid #f1f5f9' }}>
         {(['accounts', 'earnings', 'tasks'] as const).map(t => (
-          <button key={t} onClick={() => setTab(t)} style={{ flex: 1, padding: '10px 0', border: 'none', cursor: 'pointer', background: 'transparent', fontSize: 12, fontWeight: 700, color: tab === t ? '#6366f1' : '#94a3b8', borderBottom: tab === t ? '2px solid #6366f1' : '2px solid transparent' }}>
+          <button key={t} onClick={() => setTab(t)}
+            style={{
+              flex: 1, padding: '10px 0', border: 'none', cursor: 'pointer', background: 'transparent',
+              fontSize: 12, fontWeight: 700, transition: 'color 0.15s',
+              color: tab === t ? '#6366f1' : '#94a3b8',
+              borderBottom: tab === t ? '2px solid #6366f1' : '2px solid transparent',
+            }}>
             {t === 'accounts' ? '🔑 Akun' : t === 'earnings' ? '💰 Riwayat' : '📋 Tugas'}
           </button>
         ))}
       </div>
+
+      {/* Tab Content */}
       <div style={{ maxHeight: 400, overflowY: 'auto', padding: '12px 16px' }}>
-        {loading ? <div style={{ padding: 20, textAlign: 'center', color: '#94a3b8' }}>Memuat...</div> : (
+        {loading ? (
+          <div style={{ padding: 20, textAlign: 'center', color: '#94a3b8' }}>Memuat...</div>
+        ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {tab === 'accounts' && detail.accounts.map(a => (
               <div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 10, background: '#f8fafc' }}>
@@ -190,7 +231,11 @@ function MemberDetailPanel({ detail, loading, onClose }: { detail: MemberDetail;
                   <p style={{ fontSize: 13, fontWeight: 700, color: '#1e293b', margin: 0 }}>{a.username}</p>
                   <p style={{ fontSize: 11, color: '#94a3b8', margin: 0 }}>Lv.{a.level} {a.level_name} · {a.karma?.toLocaleString()} karma</p>
                 </div>
-                <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 10, background: a.status === 'active' ? '#dcfce7' : '#f1f5f9', color: a.status === 'active' ? '#15803d' : '#64748b' }}>{a.status}</span>
+                <span style={{
+                  fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 10,
+                  background: a.status === 'active' ? '#dcfce7' : '#f1f5f9',
+                  color: a.status === 'active' ? '#15803d' : '#64748b',
+                }}>{a.status}</span>
               </div>
             ))}
             {tab === 'earnings' && detail.earnings.map(e => (
@@ -200,7 +245,9 @@ function MemberDetailPanel({ detail, loading, onClose }: { detail: MemberDetail;
                   <p style={{ fontSize: 13, fontWeight: 700, color: '#1e293b', margin: 0 }}>Rp{e.amount.toLocaleString()}</p>
                   <p style={{ fontSize: 11, color: '#94a3b8', margin: 0 }}>{new Date(e.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}</p>
                 </div>
-                <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 10, background: e.status === 'paid' ? '#dcfce7' : '#fefce8', color: e.status === 'paid' ? '#15803d' : '#854d0e' }}>{e.status === 'paid' ? 'Dibayar' : 'Pending'}</span>
+                <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 10, background: e.status === 'paid' ? '#dcfce7' : '#fefce8', color: e.status === 'paid' ? '#15803d' : '#854d0e' }}>
+                  {e.status === 'paid' ? 'Dibayar' : 'Pending'}
+                </span>
               </div>
             ))}
             {tab === 'tasks' && detail.tasks.map(t => (

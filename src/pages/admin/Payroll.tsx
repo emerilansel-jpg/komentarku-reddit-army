@@ -15,37 +15,14 @@ type PayrollRow = {
 };
 
 type DateRange = 'week' | 'month' | 'all';
-type ActiveTab = 'payroll' | 'withdrawals';
-
-type WithdrawalRequest = {
-  id: string;
-  user_id: string;
-  full_name: string;
-  payment_method: string;
-  account_number: string;
-  amount: number;
-  status: string;
-  created_at: string;
-};
 
 export default function Payroll() {
   const [rows, setRows] = useState<PayrollRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [dateRange, setDateRange] = useState<DateRange>('month');
   const [markingPaid, setMarkingPaid] = useState<string | null>(null);
-  const [showExportModal, setShowExportModal] = useState(false);
-  const [activeTab, setActiveTab] = useState<ActiveTab>('payroll');
-  const [withdrawalRequests, setWithdrawalRequests] = useState<WithdrawalRequest[]>([]);
-  const [loadingWithdrawals, setLoadingWithdrawals] = useState(false);
-  const [markingTransferred, setMarkingTransferred] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadPayroll();
-  }, [dateRange]);
-
-  useEffect(() => {
-    if (activeTab === 'withdrawals') loadWithdrawals();
-  }, [activeTab]);
+  useEffect(() => { loadPayroll(); }, [dateRange]);
 
   function getRangeStart(): string {
     const now = new Date();
@@ -59,6 +36,7 @@ export default function Payroll() {
     const rangeStart = getRangeStart();
     const { data: profiles } = await supabase.from('profiles').select('id, display_name').eq('role', 'army');
     if (!profiles) { setLoading(false); return; }
+
     const payrollRows: PayrollRow[] = await Promise.all(profiles.map(async (p) => {
       const [tasksRes, earningsRes, accountsRes] = await Promise.all([
         supabase.from('tasks').select('id', { count: 'exact', head: true })
@@ -74,30 +52,19 @@ export default function Payroll() {
       const pendingAmount = pendingEarnings.reduce((s: number, e: any) => s + e.amount, 0);
       const paidAmount = earnings.filter((e: any) => e.status === 'paid').reduce((s: number, e: any) => s + e.amount, 0);
       return {
-        memberId: p.id,
-        memberName: p.display_name,
+        memberId: p.id, memberName: p.display_name,
         topLevelEmoji: topAcc?.level_emoji || '🥚',
         topLevelName: topAcc?.level_name || 'Si Telur',
         tasksCompleted: tasksRes.count || 0,
         levelRate: topAcc?.level_rate || 8000,
         totalEarned: pendingAmount + paidAmount,
-        pendingAmount,
-        paidAmount,
+        pendingAmount, paidAmount,
         pendingEarningIds: pendingEarnings.map((e: any) => e.id),
       };
     }));
+
     setRows(payrollRows.filter(r => r.totalEarned > 0 || r.tasksCompleted > 0));
     setLoading(false);
-  }
-
-  async function loadWithdrawals() {
-    setLoadingWithdrawals(true);
-    const { data } = await supabase
-      .from('withdrawal_requests')
-      .select('*')
-      .order('created_at', { ascending: false });
-    setWithdrawalRequests(data || []);
-    setLoadingWithdrawals(false);
   }
 
   async function handleMarkPaid(row: PayrollRow) {
@@ -107,22 +74,6 @@ export default function Payroll() {
       .in('id', row.pendingEarningIds);
     await loadPayroll();
     setMarkingPaid(null);
-  }
-
-  async function handleMarkTransferred(req: WithdrawalRequest) {
-    setMarkingTransferred(req.id);
-    await supabase
-      .from('withdrawal_requests')
-      .update({ status: 'transferred' })
-      .eq('id', req.id);
-    await supabase
-      .from('earnings')
-      .update({ status: 'paid', paid_at: new Date().toISOString() })
-      .eq('army_member_id', req.user_id)
-      .eq('type', 'withdrawal')
-      .eq('status', 'pending');
-    await loadWithdrawals();
-    setMarkingTransferred(null);
   }
 
   function exportCSV() {
@@ -135,234 +86,138 @@ export default function Payroll() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `payroll-${dateRange}-${new Date().toISOString().slice(0,10)}.csv`;
+    a.download = `payroll-${dateRange}-${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-    setShowExportModal(false);
-  }
-
-  function formatDate(iso: string) {
-    return new Date(iso).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
   }
 
   const totalPending = rows.reduce((s, r) => s + r.pendingAmount, 0);
   const totalPaid = rows.reduce((s, r) => s + r.paidAmount, 0);
-  const pendingWithdrawals = withdrawalRequests.filter(r => r.status === 'pending');
 
   return (
-    <div className="flex flex-col min-h-full bg-gray-50">
-      <div className="px-4 pt-5 pb-4" style={{ background: 'linear-gradient(160deg, #78350f 0%, #b45309 50%, #d97706 100%)', borderRadius: '0 0 24px 24px' }}>
-        <div className="flex items-center justify-between mb-3">
-          <div>
-            <h1 className="text-xl font-black text-white">Payroll 💳</h1>
-            <p className="text-amber-200 text-xs">Kelola pembayaran prajurit</p>
-          </div>
-          {activeTab === 'payroll' && (
-            <button
-              onClick={() => setShowExportModal(true)}
-              className="px-3 py-2 rounded-xl text-xs font-bold text-white"
-              style={{ background: 'rgba(255,255,255,0.2)' }}
-            >
-              📥 Export CSV
+    <div style={{ padding: '28px 32px', maxWidth: 1200 }}>
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+        <div>
+          <h1 style={{ fontSize: 24, fontWeight: 900, color: '#0f172a', margin: 0 }}>Payroll</h1>
+          <p style={{ color: '#64748b', marginTop: 4, fontSize: 14 }}>Kelola pembayaran prajurit</p>
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          {(['week', 'month', 'all'] as DateRange[]).map(r => (
+            <button key={r} onClick={() => setDateRange(r)}
+              style={{
+                padding: '7px 14px', borderRadius: 8, border: 'none', cursor: 'pointer',
+                fontSize: 12, fontWeight: 700,
+                background: dateRange === r ? '#0f172a' : 'white',
+                color: dateRange === r ? 'white' : '#64748b',
+                boxShadow: dateRange === r ? 'none' : '0 1px 4px rgba(0,0,0,0.08)',
+              }}>
+              {r === 'week' ? '7 Hari' : r === 'month' ? 'Bulan Ini' : 'Semua'}
             </button>
-          )}
-        </div>
-        <div className="flex gap-2 mb-3">
-          <button
-            onClick={() => setActiveTab('payroll')}
-            className="flex-1 py-2 rounded-xl text-xs font-bold transition-all"
-            style={{ background: activeTab === 'payroll' ? 'white' : 'rgba(255,255,255,0.2)', color: activeTab === 'payroll' ? '#b45309' : 'white' }}
-          >
-            💳 Payroll
-          </button>
-          <button
-            onClick={() => setActiveTab('withdrawals')}
-            className="flex-1 py-2 rounded-xl text-xs font-bold transition-all relative"
-            style={{ background: activeTab === 'withdrawals' ? 'white' : 'rgba(255,255,255,0.2)', color: activeTab === 'withdrawals' ? '#b45309' : 'white' }}
-          >
-            💸 Pencairan
-            {pendingWithdrawals.length > 0 && activeTab !== 'withdrawals' && (
-              <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-white text-xs flex items-center justify-center font-black">
-                {pendingWithdrawals.length}
-              </span>
-            )}
+          ))}
+          <button onClick={exportCSV}
+            style={{ padding: '7px 16px', borderRadius: 8, border: 'none', cursor: 'pointer', background: '#f0fdf4', color: '#15803d', fontSize: 12, fontWeight: 700 }}>
+            📥 Export CSV
           </button>
         </div>
-        {activeTab === 'payroll' && (
-          <>
-            <div className="grid grid-cols-2 gap-2 mb-3">
-              <div className="rounded-xl p-3 text-center" style={{ background: 'rgba(255,255,255,0.15)' }}>
-                <p className="text-amber-200 text-xs font-medium">⏳ Belum Dibayar</p>
-                <p className="text-xl font-black text-white">Rp{(totalPending/1000).toFixed(0)}rb</p>
-              </div>
-              <div className="rounded-xl p-3 text-center" style={{ background: 'rgba(255,255,255,0.15)' }}>
-                <p className="text-amber-200 text-xs font-medium">✅ Sudah Dibayar</p>
-                <p className="text-xl font-black text-white">Rp{(totalPaid/1000).toFixed(0)}rb</p>
-              </div>
-            </div>
-            <div className="flex gap-2">
-              {(['week', 'month', 'all'] as DateRange[]).map(r => (
-                <button
-                  key={r}
-                  onClick={() => setDateRange(r)}
-                  className={`flex-1 py-1.5 rounded-xl text-xs font-bold transition-all ${dateRange === r ? 'bg-white text-amber-700' : 'text-white'}`}
-                  style={{ background: dateRange === r ? 'white' : 'rgba(255,255,255,0.2)' }}
-                >
-                  {r === 'week' ? '7 Hari' : r === 'month' ? 'Bulan Ini' : 'Semua'}
-                </button>
-              ))}
-            </div>
-          </>
-        )}
-        {activeTab === 'withdrawals' && (
-          <div className="grid grid-cols-2 gap-2">
-            <div className="rounded-xl p-3 text-center" style={{ background: 'rgba(255,255,255,0.15)' }}>
-              <p className="text-amber-200 text-xs font-medium">⏳ Menunggu</p>
-              <p className="text-xl font-black text-white">{pendingWithdrawals.length}</p>
-            </div>
-            <div className="rounded-xl p-3 text-center" style={{ background: 'rgba(255,255,255,0.15)' }}>
-              <p className="text-amber-200 text-xs font-medium">💸 Total Pending</p>
-              <p className="text-xl font-black text-white">
-                Rp{(pendingWithdrawals.reduce((s, r) => s + r.amount, 0) / 1000).toFixed(0)}rb
-              </p>
-            </div>
-          </div>
-        )}
       </div>
-      <div className="flex-1 px-4 py-4 pb-24 space-y-3">
-        {activeTab === 'payroll' && (
-          loading ? (
-            Array(3).fill(0).map((_, i) => <div key={i} className="bg-white rounded-2xl h-28 animate-pulse" />)
-          ) : rows.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16">
-              <div className="text-4xl mb-3">📭</div>
-              <p className="text-gray-500 text-sm">Tidak ada data payroll untuk periode ini</p>
+
+      {/* Summary Cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 24 }}>
+        {[
+          { label: 'Total Anggota', value: rows.length, sub: 'dengan aktivitas', color: '#6366f1', icon: '👥' },
+          { label: 'Belum Dibayar', value: `Rp${(totalPending / 1000).toFixed(0)}rb`, sub: 'perlu ditransfer', color: '#f59e0b', icon: '⏳' },
+          { label: 'Sudah Dibayar', value: `Rp${(totalPaid / 1000).toFixed(0)}rb`, sub: 'periode ini', color: '#10b981', icon: '✅' },
+        ].map(card => (
+          <div key={card.label} style={{ background: 'white', borderRadius: 14, padding: '18px 22px', boxShadow: '0 1px 8px rgba(0,0,0,0.06)', borderTop: `3px solid ${card.color}` }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+              <span style={{ fontSize: 20 }}>{card.icon}</span>
+              <span style={{ fontSize: 11, fontWeight: 700, color: card.color }}>{card.label}</span>
             </div>
-          ) : (
-            rows.map(row => (
-              <div key={row.memberId} className="bg-white rounded-2xl shadow-sm overflow-hidden" style={{ boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
-                <div className="p-4">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xl font-black text-white" style={{ background: 'linear-gradient(135deg, #b45309 0%, #d97706 100%)' }}>
-                      {row.memberName.slice(0, 1)}
-                    </div>
-                    <div>
-                      <p className="font-black text-gray-800">{row.memberName}</p>
-                      <p className="text-xs text-gray-400">{row.topLevelEmoji} {row.topLevelName} · Rp{(row.levelRate/1000).toFixed(0)}rb/misi</p>
-                    </div>
-                    <div className="ml-auto text-right">
-                      <p className="text-lg font-black text-gray-800">Rp{(row.totalEarned/1000).toFixed(0)}rb</p>
-                      <p className="text-xs text-gray-400">{row.tasksCompleted} misi</p>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2 mb-3">
-                    <div className="rounded-xl p-2.5 text-center bg-amber-50">
-                      <p className="font-black text-amber-700 text-sm">Rp{(row.pendingAmount/1000).toFixed(0)}rb</p>
-                      <p className="text-xs text-amber-500">⏳ Belum Dibayar</p>
-                    </div>
-                    <div className="rounded-xl p-2.5 text-center bg-emerald-50">
-                      <p className="font-black text-emerald-700 text-sm">Rp{(row.paidAmount/1000).toFixed(0)}rb</p>
-                      <p className="text-xs text-emerald-500">✅ Sudah Dibayar</p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => handleMarkPaid(row)}
-                    disabled={row.pendingAmount === 0 || markingPaid === row.memberId}
-                    className="w-full py-2.5 rounded-xl font-bold text-sm transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
-                    style={{
-                      background: row.pendingAmount > 0 ? 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)' : '#e5e7eb',
-                      color: row.pendingAmount > 0 ? 'white' : '#9ca3af',
-                      boxShadow: row.pendingAmount > 0 ? '0 4px 12px rgba(245,158,11,0.3)' : 'none'
-                    }}
+            <p style={{ fontSize: 26, fontWeight: 900, color: '#0f172a', margin: 0 }}>{card.value}</p>
+            <p style={{ fontSize: 12, color: '#94a3b8', marginTop: 3 }}>{card.sub}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Table */}
+      <div style={{ background: 'white', borderRadius: 14, boxShadow: '0 1px 8px rgba(0,0,0,0.06)', overflow: 'auto' }}>
+        {loading ? (
+          <div style={{ padding: 60, textAlign: 'center', color: '#94a3b8' }}>Memuat...</div>
+        ) : rows.length === 0 ? (
+          <div style={{ padding: 60, textAlign: 'center', color: '#94a3b8' }}>
+            <div style={{ fontSize: 36, marginBottom: 8 }}>📭</div>
+            <p>Tidak ada data payroll untuk periode ini</p>
+          </div>
+        ) : (
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ background: '#f8fafc' }}>
+                {['Anggota', 'Level', 'Tugas Selesai', 'Rate/Misi', 'Total Earned', 'Belum Dibayar', 'Sudah Dibayar', 'Aksi'].map(h => (
+                  <th key={h} style={{ padding: '11px 20px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row, i) => {
+                const isMarking = markingPaid === row.memberId;
+                return (
+                  <tr key={row.memberId} style={{ borderTop: i > 0 ? '1px solid #f1f5f9' : 'none' }}
+                    onMouseEnter={e => (e.currentTarget.style.background = '#f8fafc')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                   >
-                    {markingPaid === row.memberId ? '⏳ Memproses...' : row.pendingAmount > 0 ? `💸 Tandai Lunas Rp${(row.pendingAmount/1000).toFixed(0)}rb` : '✅ Sudah Lunas'}
-                  </button>
-                </div>
-              </div>
-            ))
-          )
-        )}
-        {activeTab === 'withdrawals' && (
-          loadingWithdrawals ? (
-            Array(3).fill(0).map((_, i) => <div key={i} className="bg-white rounded-2xl h-32 animate-pulse" />)
-          ) : withdrawalRequests.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16">
-              <div className="text-4xl mb-3">📭</div>
-              <p className="text-gray-500 text-sm">Belum ada permintaan pencairan</p>
-            </div>
-          ) : (
-            withdrawalRequests.map(req => {
-              const isPending = req.status === 'pending';
-              const isProcessing = markingTransferred === req.id;
-              return (
-                <div key={req.id} className="bg-white rounded-2xl shadow-sm overflow-hidden" style={{ boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
-                  <div className="p-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-2">
-                        <div className="w-9 h-9 rounded-xl flex items-center justify-center text-lg font-black text-white" style={{ background: 'linear-gradient(135deg, #b45309 0%, #d97706 100%)' }}>
-                          {req.full_name.slice(0, 1)}
+                    <td style={{ padding: '13px 20px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <div style={{ width: 30, height: 30, borderRadius: 8, background: 'linear-gradient(135deg,#b45309,#d97706)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: 13, fontWeight: 800 }}>
+                          {row.memberName.slice(0, 1)}
                         </div>
-                        <div>
-                          <p className="font-black text-gray-800 text-sm">{req.full_name}</p>
-                          <p className="text-xs text-gray-400">{formatDate(req.created_at)}</p>
-                        </div>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: '#1e293b' }}>{row.memberName}</span>
                       </div>
-                      <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${isPending ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
-                        {isPending ? '⏳ Menunggu' : '✅ Ditransfer'}
+                    </td>
+                    <td style={{ padding: '13px 20px', fontSize: 13, color: '#334155' }}>
+                      {row.topLevelEmoji} {row.topLevelName}
+                    </td>
+                    <td style={{ padding: '13px 20px', fontSize: 13, fontWeight: 700, color: '#1e293b', textAlign: 'center' }}>
+                      {row.tasksCompleted}
+                    </td>
+                    <td style={{ padding: '13px 20px', fontSize: 13, color: '#64748b' }}>
+                      Rp{(row.levelRate / 1000).toFixed(0)}rb
+                    </td>
+                    <td style={{ padding: '13px 20px', fontSize: 14, fontWeight: 800, color: '#0f172a' }}>
+                      Rp{(row.totalEarned / 1000).toFixed(0)}rb
+                    </td>
+                    <td style={{ padding: '13px 20px' }}>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: '#d97706', background: '#fef9c3', padding: '3px 10px', borderRadius: 12 }}>
+                        Rp{(row.pendingAmount / 1000).toFixed(0)}rb
                       </span>
-                    </div>
-                    <div className="rounded-xl p-3 mb-3" style={{ background: isPending ? '#fffbeb' : '#f0fdf4', border: `1px solid ${isPending ? '#fde68a' : '#bbf7d0'}` }}>
-                      <p className={`text-2xl font-black ${isPending ? 'text-amber-700' : 'text-emerald-700'}`}>
-                        Rp{req.amount.toLocaleString('id-ID')}
-                      </p>
-                    </div>
-                    <div className="space-y-1.5 mb-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs text-gray-500">Metode</span>
-                        <span className="text-xs font-bold text-gray-700">{req.payment_method}</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs text-gray-500">No. Rekening / Akun</span>
-                        <span className="text-xs font-bold text-gray-700 font-mono">{req.account_number}</span>
-                      </div>
-                    </div>
-                    {isPending && (
+                    </td>
+                    <td style={{ padding: '13px 20px' }}>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: '#15803d', background: '#dcfce7', padding: '3px 10px', borderRadius: 12 }}>
+                        Rp{(row.paidAmount / 1000).toFixed(0)}rb
+                      </span>
+                    </td>
+                    <td style={{ padding: '13px 20px' }}>
                       <button
-                        onClick={() => handleMarkTransferred(req)}
-                        disabled={isProcessing}
-                        className="w-full py-2.5 rounded-xl font-bold text-sm text-white transition-all active:scale-95 disabled:opacity-60"
-                        style={{ background: 'linear-gradient(135deg, #059669 0%, #10b981 100%)', boxShadow: '0 4px 12px rgba(16,185,129,0.3)' }}
-                      >
-                        {isProcessing ? '⏳ Memproses...' : '✅ Tandai Sudah Transfer'}
+                        onClick={() => handleMarkPaid(row)}
+                        disabled={row.pendingAmount === 0 || isMarking}
+                        style={{
+                          padding: '6px 14px', borderRadius: 8, border: 'none', cursor: row.pendingAmount > 0 ? 'pointer' : 'default',
+                          fontSize: 12, fontWeight: 700,
+                          background: row.pendingAmount > 0 ? '#fef9c3' : '#f1f5f9',
+                          color: row.pendingAmount > 0 ? '#854d0e' : '#94a3b8',
+                          opacity: isMarking ? 0.6 : 1,
+                          whiteSpace: 'nowrap',
+                        }}>
+                        {isMarking ? '⏳...' : row.pendingAmount > 0 ? '💸 Tandai Lunas' : '✅ Lunas'}
                       </button>
-                    )}
-                  </div>
-                </div>
-              );
-            })
-          )
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         )}
       </div>
-      {showExportModal && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center px-4 pb-6" style={{ background: 'rgba(0,0,0,0.5)' }} onClick={() => setShowExportModal(false)}>
-          <div className="bg-white rounded-3xl w-full max-w-sm p-5 bounce-in" onClick={e => e.stopPropagation()}>
-            <h3 className="font-black text-gray-800 text-lg mb-1">Export CSV</h3>
-            <p className="text-gray-500 text-sm mb-4">
-              Export data payroll {rows.length} anggota untuk periode {dateRange === 'week' ? '7 hari terakhir' : dateRange === 'month' ? 'bulan ini' : 'semua waktu'}.
-            </p>
-            <div className="rounded-xl p-3 bg-gray-50 border border-gray-200 mb-4">
-              <p className="text-xs text-gray-500 font-semibold mb-1">Kolom yang diekspor:</p>
-              <p className="text-xs text-gray-600">Nama · Level · Tugas Selesai · Rate per Task · Total Earned · Pending · Sudah Dibayar</p>
-            </div>
-            <div className="flex gap-2">
-              <button onClick={() => setShowExportModal(false)} className="flex-1 py-3 rounded-xl font-bold text-gray-600 bg-gray-100 text-sm">Batal</button>
-              <button onClick={exportCSV} className="flex-1 py-3 rounded-xl font-bold text-white text-sm" style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)' }}>
-                📥 Download CSV
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
