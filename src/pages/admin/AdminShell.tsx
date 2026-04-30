@@ -1,19 +1,25 @@
-import { useState, useEffect } from 'react';
-import { Profile } from '../../lib/supabase';
+import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
-import AdminBottomNav, { AdminPage } from '../../components/admin/AdminBottomNav';
 import AdminDashboard from './AdminDashboard';
+import ApprovalQueue from './ApprovalQueue';
 import KelolaAkun from './KelolaAkun';
 import TaskQueue from './TaskQueue';
-import ApprovalQueue from './ApprovalQueue';
 import Tim from './Tim';
 import Payroll from './Payroll';
 import Settings from './Settings';
 import FeedbackDashboard from './FeedbackDashboard';
+import AdminBottomNav from '../../components/admin/AdminBottomNav';
+
+export type AdminPage = 'dashboard' | 'accounts' | 'tasks' | 'approvals' | 'team' | 'payroll' | 'settings' | 'feedback';
+
+interface Profile {
+  id: string;
+  display_name: string;
+  role: string;
+}
 
 interface AdminShellProps {
   profile: Profile;
-  onSignOut: () => void;
 }
 
 export default function AdminShell({ profile }: AdminShellProps) {
@@ -21,37 +27,30 @@ export default function AdminShell({ profile }: AdminShellProps) {
   const [pendingApprovals, setPendingApprovals] = useState(0);
 
   useEffect(() => {
-    loadPendingCount();
-    const interval = setInterval(loadPendingCount, 30000);
-    return () => clearInterval(interval);
-  }, []);
-
-  async function loadPendingCount() {
-    const { count } = await supabase
+    supabase
       .from('tasks')
       .select('id', { count: 'exact', head: true })
-      .eq('status', 'submitted');
-    setPendingApprovals(count || 0);
-  }
+      .eq('status', 'submitted')
+      .then(({ count }) => setPendingApprovals(count || 0));
+  }, [activePage]);
 
   return (
-    <div className="min-h-screen max-w-2xl mx-auto relative bg-gray-50">
-      <div className="min-h-screen overflow-y-auto">
-        {activePage === 'dashboard' && <AdminDashboard profile={profile} />}
-        {activePage === 'accounts' && <KelolaAkun />}
-        {activePage === 'tasks' && <TaskQueue />}
-        {activePage === 'approvals' && <ApprovalQueue />}
-        {activePage === 'team' && <Tim />}
-        {activePage === 'payroll' && <Payroll />}
-        {activePage === 'feedback' && <FeedbackDashboard />}
-        {activePage === 'settings' && <Settings />}
-      </div>
-
+    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: '#f1f5f9' }}>
       <AdminBottomNav
         active={activePage}
-        onChange={(page) => { setActivePage(page); if (page === 'approvals') loadPendingCount(); }}
+        onChange={setActivePage}
         pendingApprovals={pendingApprovals}
       />
+      <main style={{ flex: 1, overflowY: 'auto', minWidth: 0 }}>
+        {activePage === 'dashboard'  && <AdminDashboard profile={profile} />}
+        {activePage === 'approvals'  && <ApprovalQueue />}
+        {activePage === 'accounts'   && <KelolaAkun />}
+        {activePage === 'tasks'      && <TaskQueue />}
+        {activePage === 'team'       && <Tim />}
+        {activePage === 'payroll'    && <Payroll />}
+        {activePage === 'settings'   && <Settings />}
+        {activePage === 'feedback'   && <FeedbackDashboard />}
+      </main>
     </div>
   );
 }
