@@ -125,7 +125,7 @@ export default function ApprovalQueue() {
           <div style={{ padding: 60, textAlign: 'center', color: '#94a3b8' }}>Memuat...</div>
         ) : filtered.length === 0 ? (
           <div style={{ padding: 60, textAlign: 'center', color: '#94a3b8' }}>
-            <div style={{ fontSize: 40, marginBottom: 8 }}>ð½</div>
+            <div style={{ fontSize: 40, marginBottom: 8 }}>📽</div>
             <p>Tidak ada submission</p>
           </div>
         ) : (
@@ -140,8 +140,8 @@ export default function ApprovalQueue() {
             <tbody>
               {filtered.map((item, i) => {
                 const sc = STATUS_LABEL[item.status] || STATUS_LABEL.pending;
-                const member = (item.profiles as { display_name: string } | null)?.display_name || 'â';
-                const account = (item.reddit_accounts as { username: string } | null)?.username || 'â';
+                const member = (item.profiles as { display_name: string } | null)?.display_name || '—';
+                const account = (item.reddit_accounts as { username: string } | null)?.username || '—';
                 const isProcessing = processing === item.id;
                 return (
                   <tr key={item.id} style={{ borderTop: i > 0 ? '1px solid #f1f5f9' : 'none', transition: 'background 0.15s' }}
@@ -164,7 +164,7 @@ export default function ApprovalQueue() {
                       <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.thread_title}</div>
                       {item.screenshot_url && (
                         <a href={item.screenshot_url} target="_blank" rel="noopener noreferrer"
-                          style={{ fontSize: 11, color: '#6366f1', textDecoration: 'none' }}>ð· Lihat screenshot</a>
+                          style={{ fontSize: 11, color: '#6366f1', textDecoration: 'none' }}>📷 Lihat screenshot</a>
                       )}
                     </td>
                     <td style={{ padding: '12px 20px', fontSize: 13, color: '#64748b' }}>{account}</td>
@@ -183,7 +183,7 @@ export default function ApprovalQueue() {
                               background: '#dcfce7', color: '#15803d', fontSize: 12, fontWeight: 700,
                               opacity: isProcessing ? 0.5 : 1,
                             }}>
-                            {isProcessing ? '...' : 'â Setuju'}
+                            {isProcessing ? '...' : '✓ Setuju'}
                           </button>
                           <button
                             onClick={() => handleAction(item.id, 'reject')}
@@ -193,7 +193,7 @@ export default function ApprovalQueue() {
                               background: '#fee2e2', color: '#b91c1c', fontSize: 12, fontWeight: 700,
                               opacity: isProcessing ? 0.5 : 1,
                             }}>
-                            {isProcessing ? '...' : 'â Tolak'}
+                            {isProcessing ? '...' : '✗ Tolak'}
                           </button>
                           {item.admin_brief && (
                             <button
@@ -204,7 +204,7 @@ export default function ApprovalQueue() {
                           )}
                         </div>
                       ) : (
-                        <span style={{ fontSize: 12, color: '#94a3b8' }}>â</span>
+                        <span style={{ fontSize: 12, color: '#94a3b8' }}>—</span>
                       )}
                     </td>
                   </tr>
@@ -227,11 +227,11 @@ export default function ApprovalQueue() {
             <div style={{ display: 'flex', gap: 8 }}>
               <button onClick={() => { setPreview(null); handleAction(preview.id, 'approve'); }}
                 style={{ flex: 1, padding: 10, borderRadius: 10, border: 'none', background: '#dcfce7', color: '#15803d', fontWeight: 700, cursor: 'pointer', fontSize: 13 }}>
-                â Setuju
+                ✓ Setuju
               </button>
               <button onClick={() => { setPreview(null); handleAction(preview.id, 'reject'); }}
                 style={{ flex: 1, padding: 10, borderRadius: 10, border: 'none', background: '#fee2e2', color: '#b91c1c', fontWeight: 700, cursor: 'pointer', fontSize: 13 }}>
-                â Tolak
+                ✗ Tolak
               </button>
               <button onClick={() => setPreview(null)}
                 style={{ padding: '10px 16px', borderRadius: 10, border: 'none', background: '#f1f5f9', color: '#64748b', fontWeight: 700, cursor: 'pointer', fontSize: 13 }}>
