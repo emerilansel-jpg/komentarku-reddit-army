@@ -48,10 +48,10 @@ export default function AdminDashboard({ profile }: Props) {
   }
 
   const statCards: StatCard[] = [
-    { label: 'Anggota Aktif',    value: stats.members,      sub: 'prajurit terdaftar',       color: '#6366f1', icon: 'ð¥' },
-    { label: 'Akun Reddit',      value: stats.accounts,     sub: 'akun aktif',               color: '#10b981', icon: 'ð' },
-    { label: 'Perlu Direview',   value: stats.pendingTasks, sub: 'submission menunggu',      color: '#f59e0b', icon: 'â' },
-    { label: 'Belum Dibayar',    value: `Rp${(stats.pendingEarnings/1000).toFixed(0)}rb`, sub: 'total pending payroll', color: '#ef4444', icon: 'ð³' },
+    { label: 'Anggota Aktif',    value: stats.members,      sub: 'prajurit terdaftar',       color: '#6366f1', icon: '👥' },
+    { label: 'Akun Reddit',      value: stats.accounts,     sub: 'akun aktif',               color: '#10b981', icon: '🔑' },
+    { label: 'Perlu Direview',   value: stats.pendingTasks, sub: 'submission menunggu',      color: '#f59e0b', icon: '✅' },
+    { label: 'Belum Dibayar',    value: `Rp${(stats.pendingEarnings/1000).toFixed(0)}rb`, sub: 'total pending payroll', color: '#ef4444', icon: '💳' },
   ];
 
   const STATUS_LABEL: Record<string, { label: string; color: string }> = {
@@ -70,7 +70,7 @@ export default function AdminDashboard({ profile }: Props) {
           Dashboard
         </h1>
         <p style={{ color: '#64748b', marginTop: 4, fontSize: 14 }}>
-          Selamat datang, {profile.display_name} Â· Gambaran umum operasi KomentarKu
+          Selamat datang, {profile.display_name} · Gambaran umum operasi KomentarKu
         </p>
       </div>
 
@@ -110,7 +110,7 @@ export default function AdminDashboard({ profile }: Props) {
           <div style={{ padding: 40, textAlign: 'center', color: '#94a3b8' }}>Memuat...</div>
         ) : activity.length === 0 ? (
           <div style={{ padding: 40, textAlign: 'center', color: '#94a3b8' }}>
-            <div style={{ fontSize: 36, marginBottom: 8 }}>ð­</div>
+            <div style={{ fontSize: 36, marginBottom: 8 }}>💭</div>
             <p>Belum ada aktivitas</p>
           </div>
         ) : (

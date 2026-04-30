@@ -1,14 +1,14 @@
 import { type AdminPage } from '../../pages/admin/AdminShell';
 
 const NAV_ITEMS: { page: AdminPage; label: string; icon: string }[] = [
-  { page: 'dashboard',  label: 'Dashboard',    icon: 'ð ' },
-  { page: 'approvals',  label: 'Persetujuan',  icon: 'â' },
-  { page: 'accounts',   label: 'Akun Reddit',  icon: 'ð' },
-  { page: 'tasks',      label: 'Task Queue',   icon: 'ð' },
-  { page: 'team',       label: 'Tim',          icon: 'ð¥' },
-  { page: 'payroll',    label: 'Payroll',      icon: 'ð³' },
-  { page: 'feedback',   label: 'Feedback',     icon: 'ð¬' },
-  { page: 'settings',   label: 'Pengaturan',   icon: 'âï¸' },
+  { page: 'dashboard',  label: 'Dashboard',    icon: '🏠' },
+  { page: 'approvals',  label: 'Persetujuan',  icon: '✅' },
+  { page: 'accounts',   label: 'Akun Reddit',  icon: '🔑' },
+  { page: 'tasks',      label: 'Task Queue',   icon: '📋' },
+  { page: 'team',       label: 'Tim',          icon: '👥' },
+  { page: 'payroll',    label: 'Payroll',      icon: '💳' },
+  { page: 'feedback',   label: 'Feedback',     icon: '💬' },
+  { page: 'settings',   label: 'Pengaturan',   icon: '⚙️' },
 ];
 
 interface Props {
@@ -32,7 +32,7 @@ export default function AdminBottomNav({ active, onChange, pendingApprovals }: P
     >
       {/* Logo */}
       <div className="px-5 py-5 border-b border-white/10">
-        <p className="text-white font-black text-lg tracking-tight">âï¸ KomentarKu</p>
+        <p className="text-white font-black text-lg tracking-tight">⚔️ KomentarKu</p>
         <p className="text-slate-400 text-xs font-medium mt-0.5">Admin Panel</p>
       </div>
 
@@ -67,7 +67,7 @@ export default function AdminBottomNav({ active, onChange, pendingApprovals }: P
 
       {/* Footer */}
       <div className="px-5 py-4 border-t border-white/10">
-        <p className="text-slate-500 text-xs">v1.0 Â· Admin Only</p>
+        <p className="text-slate-500 text-xs">v1.0 · Admin Only</p>
       </div>
     </aside>
   );
