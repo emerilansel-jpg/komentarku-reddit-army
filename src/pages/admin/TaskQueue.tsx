@@ -19,28 +19,29 @@ type TaskRow = {
   reddit_accounts?: { username: string } | null;
 };
 
-const PRIORITY_CFG: Record<string, { label: string; color: string; bg: string; border: string }> = {
-  high: { label: 'Urgent', color: 'text-red-600', bg: 'bg-red-50', border: 'border-l-red-500' },
-  normal: { label: 'Normal', color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-l-amber-400' },
-  low: { label: 'Rendah', color: 'text-gray-500', bg: 'bg-gray-50', border: 'border-l-gray-300' },
+const PRIORITY_CFG: Record<string, { label: string; bg: string; color: string }> = {
+  high:   { label: 'Urgent', bg: '#fee2e2', color: '#b91c1c' },
+  normal: { label: 'Normal', bg: '#fef9c3', color: '#854d0e' },
+  low:    { label: 'Rendah', bg: '#f1f5f9', color: '#475569' },
 };
 
-const STATUS_CFG: Record<string, { label: string; bg: string; text: string }> = {
-  pending: { label: 'Menunggu', bg: 'bg-gray-100', text: 'text-gray-600' },
-  submitted: { label: 'Direview', bg: 'bg-blue-50', text: 'text-blue-600' },
-  approved: { label: 'Disetujui', bg: 'bg-green-50', text: 'text-green-700' },
-  rejected: { label: 'Ditolak', bg: 'bg-red-50', text: 'text-red-600' },
-  posted: { label: 'Selesai', bg: 'bg-emerald-50', text: 'text-emerald-700' },
+const STATUS_CFG: Record<string, { label: string; bg: string; color: string }> = {
+  pending:   { label: 'Menunggu',  bg: '#f1f5f9', color: '#475569' },
+  submitted: { label: 'Direview',  bg: '#dbeafe', color: '#1d4ed8' },
+  approved:  { label: 'Disetujui', bg: '#dcfce7', color: '#15803d' },
+  rejected:  { label: 'Ditolak',   bg: '#fee2e2', color: '#b91c1c' },
+  posted:    { label: 'Selesai',   bg: '#d1fae5', color: '#065f46' },
 };
 
-const TASK_TYPE_CFG: Record<string, { label: string; bg: string; text: string; reward: number }> = {
-  vote: { label: 'Vote', bg: 'bg-blue-100', text: 'text-blue-700', reward: 1000 },
-  comment: { label: 'Comment', bg: 'bg-green-100', text: 'text-green-700', reward: 10000 },
-  thread: { label: 'Thread', bg: 'bg-violet-100', text: 'text-violet-700', reward: 50000 },
+const TASK_TYPE_CFG: Record<string, { label: string; bg: string; color: string }> = {
+  vote:    { label: 'Vote',    bg: '#dbeafe', color: '#1d4ed8' },
+  comment: { label: 'Comment', bg: '#dcfce7', color: '#15803d' },
+  thread:  { label: 'Thread',  bg: '#ede9fe', color: '#6d28d9' },
 };
 
-function truncate(s: string, n: number) { return s.length > n ? s.slice(0, n) + '...' : s; }
-function fmtRp(n: number) { return n >= 1000 ? `Rp${(n / 1000).toFixed(0)}rb` : `Rp${n}`; }
+const REWARD_BY_TYPE: Record<string, number> = { vote: 1000, comment: 10000, thread: 50000 };
+
+function fmtRp(n: number) { return `Rp${(n / 1000).toFixed(0)}rb`; }
 
 export default function TaskQueue() {
   const [tasks, setTasks] = useState<TaskRow[]>([]);
@@ -49,13 +50,8 @@ export default function TaskQueue() {
   const [showCreate, setShowCreate] = useState(false);
   const [members, setMembers] = useState<{ id: string; display_name: string }[]>([]);
   const [accounts, setAccounts] = useState<{ id: string; username: string }[]>([]);
-  const [slotCounts, setSlotCounts] = useState<Record<string, number>>({});
 
-  useEffect(() => {
-    loadTasks();
-    loadMembers();
-    loadAccounts();
-  }, []);
+  useEffect(() => { loadTasks(); loadMembers(); loadAccounts(); }, []);
 
   async function loadTasks() {
     setLoading(true);
@@ -63,134 +59,133 @@ export default function TaskQueue() {
       .from('tasks')
       .select('*, profiles(display_name), reddit_accounts(username)')
       .order('created_at', { ascending: false });
-    if (data) {
-      setTasks(data);
-      loadSlotCounts(data.map((t: TaskRow) => t.id));
-    }
+    setTasks((data || []) as TaskRow[]);
     setLoading(false);
-  }
-
-  async function loadSlotCounts(taskIds: string[]) {
-    if (!taskIds.length) return;
-    const { data } = await supabase
-      .from('tasks')
-      .select('id, assigned_to')
-      .in('id', taskIds);
-    const counts: Record<string, number> = {};
-    if (data) {
-      data.forEach((t: { id: string; assigned_to: string | null }) => {
-        if (t.assigned_to) counts[t.id] = (counts[t.id] || 0) + 1;
-      });
-    }
-    setSlotCounts(counts);
   }
 
   async function loadMembers() {
     const { data } = await supabase.from('profiles').select('id, display_name').eq('role', 'army');
-    if (data) setMembers(data);
+    setMembers(data || []);
   }
 
   async function loadAccounts() {
     const { data } = await supabase.from('reddit_accounts').select('id, username').eq('status', 'active');
-    if (data) setAccounts(data);
+    setAccounts(data || []);
   }
 
   async function handleDelete(id: string) {
+    if (!window.confirm('Hapus task ini?')) return;
     await supabase.from('tasks').delete().eq('id', id);
     setTasks(prev => prev.filter(t => t.id !== id));
   }
 
+  const statuses = ['all', 'pending', 'submitted', 'approved', 'posted', 'rejected'];
   const filtered = filterStatus === 'all' ? tasks : tasks.filter(t => t.status === filterStatus);
 
+  const counts: Record<string, number> = { all: tasks.length };
+  statuses.slice(1).forEach(s => { counts[s] = tasks.filter(t => t.status === s).length; });
+
   return (
-    <div className="flex flex-col min-h-full bg-gray-50">
-      <div className="px-4 pt-5 pb-4"
-        style={{ background: 'linear-gradient(160deg, #0f172a 0%, #1e3a8a 60%, #2563eb 100%)', borderRadius: '0 0 24px 24px' }}>
-        <div className="flex items-center justify-between mb-1">
-          <div>
-            <h1 className="text-xl font-black text-white">Task Queue</h1>
-            <p className="text-blue-300 text-xs">{tasks.length} misi · {tasks.filter(t => t.status === 'pending').length} belum dikerjakan</p>
-          </div>
-          <button onClick={() => setShowCreate(true)}
-            className="px-3 py-2 rounded-xl text-xs font-bold text-white"
-            style={{ background: 'rgba(255,255,255,0.2)' }}>
-            + Buat Task
-          </button>
+    <div style={{ padding: '28px 32px', maxWidth: 1200 }}>
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+        <div>
+          <h1 style={{ fontSize: 24, fontWeight: 900, color: '#0f172a', margin: 0 }}>Task Queue</h1>
+          <p style={{ color: '#64748b', marginTop: 4, fontSize: 14 }}>
+            {tasks.length} misi total Â· {counts.pending || 0} belum dikerjakan
+          </p>
         </div>
+        <button
+          onClick={() => setShowCreate(true)}
+          style={{ padding: '9px 20px', borderRadius: 10, border: 'none', cursor: 'pointer', background: '#0f172a', color: 'white', fontSize: 13, fontWeight: 700 }}>
+          + Buat Task
+        </button>
       </div>
 
-      <div className="px-4 py-3 flex gap-2 overflow-x-auto">
-        {['all', 'pending', 'submitted', 'approved', 'posted', 'rejected'].map(s => (
+      {/* Filter */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 18, flexWrap: 'wrap' }}>
+        {statuses.map(s => (
           <button key={s} onClick={() => setFilterStatus(s)}
-            className={`flex-shrink-0 px-3 py-1 rounded-full text-xs font-semibold transition-all ${filterStatus === s ? 'bg-slate-800 text-white' : 'bg-white text-gray-500 border border-gray-200'}`}>
+            style={{
+              padding: '6px 14px', borderRadius: 20, border: 'none', cursor: 'pointer',
+              fontSize: 12, fontWeight: 600,
+              background: filterStatus === s ? '#0f172a' : 'white',
+              color: filterStatus === s ? 'white' : '#64748b',
+              boxShadow: filterStatus === s ? 'none' : '0 1px 4px rgba(0,0,0,0.08)',
+            }}>
             {s === 'all' ? 'Semua' : STATUS_CFG[s]?.label || s}
-            {s !== 'all' && (
-              <span className="ml-1 opacity-70">({tasks.filter(t => t.status === s).length})</span>
-            )}
+            <span style={{ marginLeft: 5, opacity: 0.7 }}>({counts[s] || 0})</span>
           </button>
         ))}
       </div>
 
-      <div className="flex-1 px-4 pb-24 space-y-2">
+      {/* Table */}
+      <div style={{ background: 'white', borderRadius: 14, boxShadow: '0 1px 8px rgba(0,0,0,0.06)', overflow: 'auto' }}>
         {loading ? (
-          Array(4).fill(0).map((_, i) => <div key={i} className="bg-white rounded-xl h-24 animate-pulse" />)
+          <div style={{ padding: 60, textAlign: 'center', color: '#94a3b8' }}>Memuat...</div>
         ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16">
-            <div className="text-4xl mb-3">📭</div>
-            <p className="text-gray-500 text-sm">Tidak ada task</p>
+          <div style={{ padding: 60, textAlign: 'center', color: '#94a3b8' }}>
+            <div style={{ fontSize: 36, marginBottom: 8 }}>ð­</div>
+            <p>Tidak ada task</p>
           </div>
         ) : (
-          filtered.map(task => {
-            const pc = PRIORITY_CFG[task.priority] || PRIORITY_CFG.normal;
-            const sc = STATUS_CFG[task.status] || STATUS_CFG.pending;
-            const tc = TASK_TYPE_CFG[task.task_type] || TASK_TYPE_CFG.comment;
-            const memberName = (task.profiles as { display_name: string } | null)?.display_name || '—';
-            const accountName = (task.reddit_accounts as { username: string } | null)?.username || '—';
-            const filled = slotCounts[task.id] || (task.profiles ? 1 : 0);
-            const maxQ = task.max_quantity || 1;
-            const slotFull = filled >= maxQ;
-            return (
-              <div key={task.id} className={`bg-white rounded-xl shadow-sm border-l-4 ${pc.border} overflow-hidden`}
-                style={{ boxShadow: '0 1px 6px rgba(0,0,0,0.05)' }}>
-                <div className="p-3.5">
-                  <div className="flex items-start justify-between gap-2 mb-1.5">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5 mb-1 flex-wrap">
-                        <span className="text-xs font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded-full">{task.subreddit}</span>
-                        <span className={`text-xs font-bold px-1.5 py-0.5 rounded-full ${tc.bg} ${tc.text}`}>{tc.label}</span>
-                        <span className={`text-xs font-semibold px-1.5 py-0.5 rounded-full ${pc.bg} ${pc.color}`}>{pc.label}</span>
-                        <span className={`text-xs font-semibold px-1.5 py-0.5 rounded-full ${sc.bg} ${sc.text}`}>{sc.label}</span>
+          <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 900 }}>
+            <thead>
+              <tr style={{ background: '#f8fafc' }}>
+                {['Subreddit', 'Thread', 'Tipe', 'Prioritas', 'Status', 'Anggota', 'Reward', 'Deadline', 'Aksi'].map(h => (
+                  <th key={h} style={{ padding: '11px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((task, i) => {
+                const pc = PRIORITY_CFG[task.priority] || PRIORITY_CFG.normal;
+                const sc = STATUS_CFG[task.status] || STATUS_CFG.pending;
+                const tc = TASK_TYPE_CFG[task.task_type] || TASK_TYPE_CFG.comment;
+                const member = (task.profiles as { display_name: string } | null)?.display_name || 'â';
+                const deadline = task.due_time ? new Date(task.due_time).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'â';
+                return (
+                  <tr key={task.id} style={{ borderTop: i > 0 ? '1px solid #f1f5f9' : 'none' }}
+                    onMouseEnter={e => (e.currentTarget.style.background = '#f8fafc')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                  >
+                    <td style={{ padding: '11px 16px' }}>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: '#6366f1', background: '#eef2ff', padding: '2px 8px', borderRadius: 12 }}>{task.subreddit}</span>
+                    </td>
+                    <td style={{ padding: '11px 16px', maxWidth: 220 }}>
+                      <div style={{ fontSize: 13, fontWeight: 500, color: '#1e293b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {task.thread_title}
                       </div>
-                      <p className="text-sm font-semibold text-gray-800">{truncate(task.thread_title, 55)}</p>
-                    </div>
-                    <p className="text-sm font-black text-emerald-600 flex-shrink-0">{fmtRp(task.reward_amount || task.payment_amount)}</p>
-                  </div>
-
-                  <div className="flex items-center justify-between mt-2">
-                    <div className="flex items-center gap-3">
-                      <div className="flex items-center gap-1.5">
-                        <div className="flex gap-0.5">
-                          {Array.from({ length: maxQ }).map((_, i) => (
-                            <div key={i} className={`w-3 h-3 rounded-full ${i < filled ? 'bg-emerald-400' : 'bg-gray-200'}`} />
-                          ))}
-                        </div>
-                        <span className={`text-xs font-semibold ${slotFull ? 'text-emerald-600' : 'text-gray-500'}`}>
-                          {filled}/{maxQ} slot
-                        </span>
-                      </div>
-                      <span className="text-xs text-gray-400">👤 {memberName}</span>
-                      <span className="text-xs text-gray-400">{accountName}</span>
-                    </div>
-                    <button
-                      onClick={() => handleDelete(task.id)}
-                      className="text-xs text-red-400 hover:text-red-600 font-medium px-2 py-0.5 rounded-lg hover:bg-red-50 transition-colors">
-                      Hapus
-                    </button>
-                  </div>
-                </div>
-              </div>
-            );
-          })
+                      {task.thread_url && (
+                        <a href={task.thread_url} target="_blank" rel="noopener noreferrer"
+                          style={{ fontSize: 11, color: '#6366f1', textDecoration: 'none' }}>ð Buka</a>
+                      )}
+                    </td>
+                    <td style={{ padding: '11px 16px' }}>
+                      <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 12, background: tc.bg, color: tc.color }}>{tc.label}</span>
+                    </td>
+                    <td style={{ padding: '11px 16px' }}>
+                      <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 12, background: pc.bg, color: pc.color }}>{pc.label}</span>
+                    </td>
+                    <td style={{ padding: '11px 16px' }}>
+                      <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 12, background: sc.bg, color: sc.color }}>{sc.label}</span>
+                    </td>
+                    <td style={{ padding: '11px 16px', fontSize: 13, color: '#334155' }}>{member}</td>
+                    <td style={{ padding: '11px 16px', fontSize: 13, fontWeight: 700, color: '#059669', whiteSpace: 'nowrap' }}>
+                      {fmtRp(task.reward_amount || task.payment_amount)}
+                    </td>
+                    <td style={{ padding: '11px 16px', fontSize: 12, color: '#94a3b8', whiteSpace: 'nowrap' }}>{deadline}</td>
+                    <td style={{ padding: '11px 16px' }}>
+                      <button onClick={() => handleDelete(task.id)}
+                        style={{ fontSize: 12, padding: '4px 10px', borderRadius: 6, border: 'none', background: '#fee2e2', color: '#b91c1c', cursor: 'pointer', fontWeight: 600 }}>
+                        Hapus
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         )}
       </div>
 
@@ -220,20 +215,7 @@ function CreateTaskModal({ members, accounts, onClose, onCreated }: {
   });
   const [saving, setSaving] = useState(false);
 
-  const REWARD_BY_TYPE: Record<string, number> = {
-    vote: 1000,
-    comment: 10000,
-    thread: 50000,
-  };
-
-  function set(key: string, val: string) {
-    if (key === 'task_type') {
-      setForm(f => ({ ...f, task_type: val }));
-    } else {
-      setForm(f => ({ ...f, [key]: val }));
-    }
-  }
-
+  function set(key: string, val: string) { setForm(f => ({ ...f, [key]: val })); }
   const reward = REWARD_BY_TYPE[form.task_type] || 10000;
 
   async function handleSave() {
@@ -259,110 +241,105 @@ function CreateTaskModal({ members, accounts, onClose, onCreated }: {
     onCreated();
   }
 
+  const inputStyle: React.CSSProperties = {
+    width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e2e8f0',
+    fontSize: 13, boxSizing: 'border-box', outline: 'none', background: 'white',
+  };
+
   return (
-    <div className="fixed inset-0 z-50 flex items-end"
-      style={{ background: 'rgba(0,0,0,0.5)' }} onClick={onClose}>
-      <div className="bg-white rounded-t-3xl w-full max-w-2xl mx-auto p-5 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-        <h3 className="font-black text-gray-800 text-lg mb-4">Buat Task Baru</h3>
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: 20 }}
+      onClick={onClose}>
+      <div style={{ background: 'white', borderRadius: 18, padding: 28, width: 540, maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
+        <h3 style={{ fontSize: 18, fontWeight: 800, color: '#0f172a', marginTop: 0, marginBottom: 20 }}>Buat Task Baru</h3>
 
-        <div className="space-y-3 mb-4">
-          <div>
-            <label className="text-xs font-bold text-gray-600 mb-1.5 block">Jenis Task</label>
-            <div className="grid grid-cols-3 gap-2">
-              {Object.entries(REWARD_BY_TYPE).map(([type]) => {
-                const cfg = TASK_TYPE_CFG[type];
-                const active = form.task_type === type;
-                return (
-                  <button
-                    key={type}
-                    type="button"
-                    onClick={() => set('task_type', type)}
-                    className={`py-2.5 rounded-xl border-2 text-sm font-bold transition-all ${active ? `${cfg.bg} ${cfg.text} border-current` : 'bg-white text-gray-400 border-gray-200'}`}>
-                    <div>{cfg.label}</div>
-                    <div className={`text-xs font-semibold mt-0.5 ${active ? cfg.text : 'text-gray-400'}`}>
-                      {type === 'vote' ? 'Rp1rb' : type === 'comment' ? 'Rp10rb' : 'Rp50rb'}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-            <div className="mt-2 flex items-center gap-1.5 bg-emerald-50 rounded-xl px-3 py-2">
-              <span className="text-xs text-emerald-600 font-semibold">Reward per slot:</span>
-              <span className="text-sm font-black text-emerald-700">Rp{reward.toLocaleString('id-ID')}</span>
-            </div>
+        {/* Task Type */}
+        <div style={{ marginBottom: 16 }}>
+          <label style={{ fontSize: 12, fontWeight: 700, color: '#475569', display: 'block', marginBottom: 8 }}>Jenis Task</label>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+            {Object.entries(TASK_TYPE_CFG).map(([type, cfg]) => {
+              const active = form.task_type === type;
+              return (
+                <button key={type} type="button" onClick={() => set('task_type', type)}
+                  style={{
+                    padding: '10px 0', borderRadius: 10, border: `2px solid ${active ? cfg.color : '#e2e8f0'}`,
+                    background: active ? cfg.bg : 'white', cursor: 'pointer',
+                    fontSize: 13, fontWeight: 700, color: active ? cfg.color : '#94a3b8',
+                  }}>
+                  <div>{cfg.label}</div>
+                  <div style={{ fontSize: 11, marginTop: 2 }}>Rp{REWARD_BY_TYPE[type] / 1000}rb</div>
+                </button>
+              );
+            })}
           </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-xs font-bold text-gray-600 mb-1 block">Subreddit *</label>
-              <input value={form.subreddit} onChange={e => set('subreddit', e.target.value)} placeholder="r/indonesia"
-                className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-blue-400" />
-            </div>
-            <div>
-              <label className="text-xs font-bold text-gray-600 mb-1 block">Max Quantity</label>
-              <input type="number" min="1" max="100" value={form.max_quantity} onChange={e => set('max_quantity', e.target.value)}
-                className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-blue-400" />
-            </div>
-          </div>
-
-          <div>
-            <label className="text-xs font-bold text-gray-600 mb-1 block">Judul Thread *</label>
-            <input value={form.thread_title} onChange={e => set('thread_title', e.target.value)} placeholder="Judul thread Reddit..."
-              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-blue-400" />
-          </div>
-          <div>
-            <label className="text-xs font-bold text-gray-600 mb-1 block">URL Thread</label>
-            <input value={form.thread_url} onChange={e => set('thread_url', e.target.value)} placeholder="https://reddit.com/r/..."
-              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-blue-400" />
-          </div>
-          <div>
-            <label className="text-xs font-bold text-gray-600 mb-1 block">Brief / Instruksi Khusus</label>
-            <textarea value={form.admin_brief} onChange={e => set('admin_brief', e.target.value)}
-              placeholder="Tuliskan arahan untuk prajurit..."
-              rows={3}
-              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-blue-400 resize-none" />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-xs font-bold text-gray-600 mb-1 block">Prioritas</label>
-              <select value={form.priority} onChange={e => set('priority', e.target.value)}
-                className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-blue-400">
-                <option value="high">Urgent</option>
-                <option value="normal">Normal</option>
-                <option value="low">Rendah</option>
-              </select>
-            </div>
-            <div>
-              <label className="text-xs font-bold text-gray-600 mb-1 block">Deadline (jam)</label>
-              <input type="number" value={form.due_hours} onChange={e => set('due_hours', e.target.value)}
-                className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-blue-400" />
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-xs font-bold text-gray-600 mb-1 block">Tugaskan ke</label>
-              <select value={form.assigned_to} onChange={e => set('assigned_to', e.target.value)}
-                className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-blue-400">
-                <option value="">— Auto-assign —</option>
-                {members.map(m => <option key={m.id} value={m.id}>{m.display_name}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="text-xs font-bold text-gray-600 mb-1 block">Akun Reddit</label>
-              <select value={form.reddit_account_id} onChange={e => set('reddit_account_id', e.target.value)}
-                className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-blue-400">
-                <option value="">— Pilih akun —</option>
-                {accounts.map(a => <option key={a.id} value={a.id}>{a.username}</option>)}
-              </select>
-            </div>
+          <div style={{ marginTop: 8, padding: '8px 12px', borderRadius: 8, background: '#f0fdf4', fontSize: 12, color: '#16a34a', fontWeight: 700 }}>
+            ð° Reward per slot: Rp{reward.toLocaleString('id-ID')}
           </div>
         </div>
 
-        <div className="flex gap-2">
-          <button onClick={onClose} className="flex-1 py-3 rounded-xl font-bold text-gray-600 bg-gray-100 text-sm">Batal</button>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 700, color: '#475569', display: 'block', marginBottom: 6 }}>Subreddit *</label>
+            <input value={form.subreddit} onChange={e => set('subreddit', e.target.value)} placeholder="r/indonesia" style={inputStyle} />
+          </div>
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 700, color: '#475569', display: 'block', marginBottom: 6 }}>Max Quantity</label>
+            <input type="number" min="1" value={form.max_quantity} onChange={e => set('max_quantity', e.target.value)} style={inputStyle} />
+          </div>
+        </div>
+
+        <div style={{ marginBottom: 12 }}>
+          <label style={{ fontSize: 12, fontWeight: 700, color: '#475569', display: 'block', marginBottom: 6 }}>Judul Thread *</label>
+          <input value={form.thread_title} onChange={e => set('thread_title', e.target.value)} placeholder="Judul thread Reddit..." style={inputStyle} />
+        </div>
+        <div style={{ marginBottom: 12 }}>
+          <label style={{ fontSize: 12, fontWeight: 700, color: '#475569', display: 'block', marginBottom: 6 }}>URL Thread</label>
+          <input value={form.thread_url} onChange={e => set('thread_url', e.target.value)} placeholder="https://reddit.com/r/..." style={inputStyle} />
+        </div>
+        <div style={{ marginBottom: 12 }}>
+          <label style={{ fontSize: 12, fontWeight: 700, color: '#475569', display: 'block', marginBottom: 6 }}>Brief / Instruksi Khusus</label>
+          <textarea value={form.admin_brief} onChange={e => set('admin_brief', e.target.value)}
+            placeholder="Tuliskan arahan untuk prajurit..." rows={3}
+            style={{ ...inputStyle, resize: 'none' }} />
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 700, color: '#475569', display: 'block', marginBottom: 6 }}>Prioritas</label>
+            <select value={form.priority} onChange={e => set('priority', e.target.value)} style={inputStyle}>
+              <option value="high">Urgent</option>
+              <option value="normal">Normal</option>
+              <option value="low">Rendah</option>
+            </select>
+          </div>
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 700, color: '#475569', display: 'block', marginBottom: 6 }}>Deadline (jam)</label>
+            <input type="number" value={form.due_hours} onChange={e => set('due_hours', e.target.value)} style={inputStyle} />
+          </div>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}>
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 700, color: '#475569', display: 'block', marginBottom: 6 }}>Tugaskan ke</label>
+            <select value={form.assigned_to} onChange={e => set('assigned_to', e.target.value)} style={inputStyle}>
+              <option value="">â Auto-assign â</option>
+              {members.map(m => <option key={m.id} value={m.id}>{m.display_name}</option>)}
+            </select>
+          </div>
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 700, color: '#475569', display: 'block', marginBottom: 6 }}>Akun Reddit</label>
+            <select value={form.reddit_account_id} onChange={e => set('reddit_account_id', e.target.value)} style={inputStyle}>
+              <option value="">â Pilih akun â</option>
+              {accounts.map(a => <option key={a.id} value={a.id}>{a.username}</option>)}
+            </select>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button onClick={onClose}
+            style={{ flex: 1, padding: 11, borderRadius: 10, border: 'none', background: '#f1f5f9', color: '#64748b', fontWeight: 700, cursor: 'pointer', fontSize: 13 }}>
+            Batal
+          </button>
           <button onClick={handleSave} disabled={saving || !form.subreddit || !form.thread_title}
-            className="flex-1 py-3 rounded-xl font-bold text-white text-sm disabled:opacity-50"
-            style={{ background: 'linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%)' }}>
+            style={{ flex: 1, padding: 11, borderRadius: 10, border: 'none', background: '#0f172a', color: 'white', fontWeight: 700, cursor: 'pointer', fontSize: 13, opacity: saving || !form.subreddit || !form.thread_title ? 0.5 : 1 }}>
             {saving ? 'Menyimpan...' : 'Buat Task'}
           </button>
         </div>
