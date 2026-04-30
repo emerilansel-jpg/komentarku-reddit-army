@@ -37,8 +37,16 @@ type MiniRankEntry = {
   total_points: number;
 };
 
+type GatedTask = Task & {
+  min_karma?: number;
+  min_account_age_days?: number;
+  draft_content?: string | null;
+  quantity?: number | null;
+  completed_count?: number | null;
+};
+
 export default function TugasHariIni({ profile, onKerjakan }: TugasHariIniProps) {
-  const [tasks, setTasks] = useState<Task[]>([]);
+  const [tasks, setTasks] = useState<GatedTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [topAccount, setTopAccount] = useState<RedditAccount | null>(null);
   const [quickWin, setQuickWin] = useState<QuickWinData | null>(null);
@@ -60,354 +68,159 @@ export default function TugasHariIni({ profile, onKerjakan }: TugasHariIniProps)
     const result = await checkLoginStreak(profile.id);
     if (result.toastData) {
       setQuickWin(result.toastData);
-      const { data } = await supabase
-        .from('profiles')
-        .select('total_points')
-        .eq('id', profile.id)
-        .maybeSingle();
+      const { data } = await supabase.from('profiles').select('total_points').eq('id', profile.id).maybeSingle();
       if (data) setUserPoints(data.total_points || 0);
     }
   }
 
   async function loadLeaderboardData() {
     const [{ data: top }, { data: all }, { count }] = await Promise.all([
-      supabase
-        .from('profiles')
-        .select('id, display_name, total_points')
-        .eq('role', 'army')
-        .order('total_points', { ascending: false })
-        .limit(3),
-      supabase
-        .from('profiles')
-        .select('id, total_points')
-        .eq('role', 'army')
-        .order('total_points', { ascending: false }),
-      supabase
-        .from('profiles')
-        .select('id', { count: 'exact', head: true })
-        .eq('role', 'army'),
+      supabase.from('profiles').select('id, display_name, total_points').eq('role', 'army').order('total_points', { ascending: false }).limit(3),
+      supabase.from('profiles').select('id, total_points').eq('role', 'army').order('total_points', { ascending: false }),
+      supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('role', 'army'),
     ]);
     if (top) setMiniRank(top);
     if (count) setTotalArmy(count);
-    if (all) {
-      const idx = all.findIndex((e: { id: string }) => e.id === profile.id);
-      setUserRank(idx >= 0 ? idx + 1 : 0);
-    }
+    if (all) { const idx = all.findIndex((e: { id: string }) => e.id === profile.id); setUserRank(idx >= 0 ? idx + 1 : 0); }
   }
 
   async function loadTasks() {
     setLoading(true);
-    const { data } = await supabase
-      .from('tasks')
-      .select('*, reddit_accounts(*)')
-      .or(`assigned_to.eq.${profile.id},assigned_to.is.null`)
-      .neq('status', 'posted')
-      .order('created_at', { ascending: false });
+    const { data } = await supabase.from('tasks').select('*, reddit_accounts(*)').or(`assigned_to.eq.${profile.id},assigned_to.is.null`).neq('status', 'posted').order('created_at', { ascending: false });
     if (data) {
-      const visible = (data as any[]).filter((t) => t.quantity == null || (t.completed_count || 0) < t.quantity);
-      const sorted = [...visible].sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority]);
-      setTasks(sorted);
+      const visible = (data as GatedTask[]).filter((t) => t.quantity == null || (t.completed_count || 0) < (t.quantity || 0));
+      setTasks(visible);
     }
     setLoading(false);
   }
 
   async function loadTopAccount() {
-    const { data } = await supabase
-      .from('reddit_accounts')
-      .select('*')
-      .eq('assigned_to', profile.id)
-      .order('level', { ascending: false })
-      .limit(1)
-      .maybeSingle();
+    const { data } = await supabase.from('reddit_accounts').select('*').eq('assigned_to', profile.id).order('level', { ascending: false }).limit(1).maybeSingle();
     if (data) setTopAccount(data);
   }
 
-  const totalPotential = tasks.reduce((sum, t) => sum + (t.payment_amount || 0), 0);
-  const pendingCount = tasks.filter(t => t.status === 'pending').length;
-
-  const levelInfo = topAccount
-    ? getLevelInfo(topAccount.karma, topAccount.account_age_days)
-    : getLevelInfo(0, 0);
-
+  const userKarma = topAccount?.karma ?? 0;
+  const userAccountAge = topAccount?.account_age_days ?? 0;
+  const accessibleTasks = tasks.filter((t) => { const minK = t.min_karma ?? 0; const minA = t.min_account_age_days ?? 0; return userKarma >= minK && userAccountAge >= minA; });
+  const lockedTasks = tasks.filter((t) => { const minK = t.min_karma ?? 0; const minA = t.min_account_age_days ?? 0; return userKarma < minK || userAccountAge < minA; });
+  const sortByPriority = (a: GatedTask, b: GatedTask) => priorityOrder[a.priority] - priorityOrder[b.priority];
+  const sortedAccessible = [...accessibleTasks].sort(sortByPriority);
+  const sortedLocked = [...lockedTasks].sort(sortByPriority);
+  const totalPotential = accessibleTasks.reduce((sum, t) => sum + (t.payment_amount || 0), 0);
+  const pendingCount = accessibleTasks.filter((t) => t.status === 'pending').length;
+  const levelInfo = topAccount ? getLevelInfo(topAccount.karma, topAccount.account_age_days) : getLevelInfo(0, 0);
   const MEDALS = ['🥇', '🥈', '🥉'];
-
   const KARMA_THRESHOLD = 10;
-  const karmaDone = !!(topAccount && topAccount.karma >= KARMA_THRESHOLD);
+  const karmaDone = userKarma >= KARMA_THRESHOLD;
 
   return (
     <div className="flex flex-col min-h-full">
       <QuickWinToast win={quickWin} onDismiss={() => setQuickWin(null)} />
-
-      <div className="px-4 pt-6 pb-4" style={{
-        background: 'linear-gradient(160deg, #1e3a8a 0%, #2563eb 60%, #3b82f6 100%)',
-        borderRadius: '0 0 28px 28px'
-      }}>
+      <div className="px-4 pt-6 pb-4" style={{ background: 'linear-gradient(160deg, #1e3a8a 0%, #2563eb 60%, #3b82f6 100%)', borderRadius: '0 0 28px 28px' }}>
         <div className="flex items-start justify-between mb-3">
           <div>
-            <h1 className="text-2xl font-black text-white">
-              Halo, {profile.display_name.split(' ')[0]}! 👋
-            </h1>
+            <h1 className="text-2xl font-black text-white">Halo, {profile.display_name.split(' ')[0]}! 👋</h1>
             <p className="text-blue-200 text-sm mt-0.5">Semangat kerja hari ini!</p>
           </div>
           <div className="flex flex-col items-center gap-1">
-            <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shadow-lg"
-              style={{ background: 'rgba(255,255,255,0.15)' }}>
-              {levelInfo.emoji}
-            </div>
+            <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shadow-lg" style={{ background: 'rgba(255,255,255,0.15)' }}>{levelInfo.emoji}</div>
           </div>
         </div>
-
-        <div className="rounded-xl px-3 py-2 mb-3 flex items-center justify-between"
-          style={{ background: 'rgba(255,255,255,0.12)' }}>
+        <div className="rounded-xl px-3 py-2 mb-3 flex items-center justify-between" style={{ background: 'rgba(255,255,255,0.12)' }}>
           <div className="flex items-center gap-2">
             <span className="text-base">{levelInfo.emoji}</span>
-            <div>
-              <p className="text-white text-xs font-black">Lv.{levelInfo.level} {levelInfo.name}</p>
-              <p className="text-blue-200 text-xs">Rate: {formatRate(levelInfo.rate)}/misi</p>
-            </div>
+            <div><p className="text-white text-xs font-black">Lv.{levelInfo.level} {levelInfo.name}</p><p className="text-blue-200 text-xs">Rate: {formatRate(levelInfo.rate)}/misi</p></div>
           </div>
-          <div className="text-right">
-            <p className="text-blue-100 text-xs">Naik level →</p>
-            <p className="text-white text-xs font-bold">{levelInfo.nextEmoji} {formatRate(levelInfo.nextRate)}/misi</p>
-          </div>
+          <div className="text-right"><p className="text-blue-100 text-xs">Naik level →</p><p className="text-white text-xs font-bold">{levelInfo.nextEmoji} {formatRate(levelInfo.nextRate)}/misi</p></div>
         </div>
-
-        <div className="rounded-2xl p-3 flex items-center gap-3"
-          style={{ background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(10px)' }}>
-          <div className="flex-1 text-center">
-            <p className="text-white font-black text-xl">{tasks.length}</p>
-            <p className="text-blue-200 text-xs">Misi Aktif</p>
-          </div>
+        <div className="rounded-2xl p-3 flex items-center gap-3" style={{ background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(10px)' }}>
+          <div className="flex-1 text-center"><p className="text-white font-black text-xl">{sortedAccessible.length}</p><p className="text-blue-200 text-xs">Bisa Dikerjakan</p></div>
           <div className="w-px h-8 bg-white/20" />
-          <div className="flex-1 text-center">
-            <p className="text-white font-black text-xl">{pendingCount}</p>
-            <p className="text-blue-200 text-xs">Belum Selesai</p>
-          </div>
+          <div className="flex-1 text-center"><p className="text-white font-black text-xl">{pendingCount}</p><p className="text-blue-200 text-xs">Belum Selesai</p></div>
           <div className="w-px h-8 bg-white/20" />
-          <div className="flex-1 text-center">
-            <p className="text-emerald-300 font-black text-lg">Rp{(totalPotential / 1000).toFixed(0)}rb</p>
-            <p className="text-blue-200 text-xs">Potensi Hari Ini</p>
-          </div>
+          <div className="flex-1 text-center"><p className="text-emerald-300 font-black text-lg">Rp{(totalPotential / 1000).toFixed(0)}rb</p><p className="text-blue-200 text-xs">Potensi Hari Ini</p></div>
         </div>
       </div>
-
       <div className="flex-1 px-4 py-4 pb-24 space-y-4">
-        {!warpBannerDismissed && (
-          <div className="rounded-2xl px-4 py-3 flex items-start gap-3"
-            style={{ background: 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)', border: '1px solid #fde68a' }}>
-            <span className="text-xl flex-shrink-0 mt-0.5">⚠️</span>
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-black text-amber-800">Pastikan WARP (1.1.1.1) aktif!</p>
-              <p className="text-xs text-amber-700 mt-0.5">Reddit diblokir di Indonesia tanpa WARP. Aktifkan sebelum memulai misi.</p>
-            </div>
-            <button
-              onClick={() => setWarpBannerDismissed(true)}
-              className="text-amber-500 text-lg flex-shrink-0 hover:text-amber-700 transition-colors leading-none">
-              ×
-            </button>
-          </div>
-        )}
+        {!warpBannerDismissed && (<div className="rounded-2xl px-4 py-3 flex items-start gap-3" style={{ background: 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)', border: '1px solid #fde68a' }}><span className="text-xl flex-shrink-0 mt-0.5">⚠️</span><div className="flex-1 min-w-0"><p className="text-xs font-black text-amber-800">Pastikan WARP (1.1.1.1) aktif!</p><p className="text-xs text-amber-700 mt-0.5">Reddit diblokir di Indonesia tanpa WARP.</p></div><button onClick={() => setWarpBannerDismissed(true)} className="text-amber-500 text-lg flex-shrink-0 hover:text-amber-700 transition-colors leading-none">×</button></div>)}
         <div className="bg-white rounded-2xl p-4 shadow-sm" style={{ boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
           <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <span className="text-lg">🏆</span>
-              <p className="text-sm font-black text-gray-800">Peringkat Kamu</p>
-            </div>
-            <button
-              onClick={() => setShowLeaderboard(true)}
-              className="text-xs font-semibold text-blue-600 hover:text-blue-700 transition-colors">
-              Lihat Semua →
-            </button>
+            <div className="flex items-center gap-2"><span className="text-lg">🏆</span><p className="text-sm font-black text-gray-800">Peringkat Kamu</p></div>
+            <button onClick={() => setShowLeaderboard(true)} className="text-xs font-semibold text-blue-600 hover:text-blue-700 transition-colors">Lihat Semua →</button>
           </div>
-
-          <div className="flex items-center gap-3 mb-3 px-3 py-2.5 rounded-xl"
-            style={{ background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)', border: '1px solid #bfdbfe' }}>
-            <div className="text-2xl font-black text-blue-700">
-              #{userRank > 0 ? userRank : '—'}
-            </div>
-            <div className="flex-1">
-              <p className="text-xs text-blue-500 font-semibold">dari {totalArmy} army</p>
-              <p className="text-sm font-black text-blue-800">Rp{userPoints.toLocaleString('id-ID')} Penghasilan</p>
-            </div>
+          <div className="flex items-center gap-3 mb-3 px-3 py-2.5 rounded-xl" style={{ background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)', border: '1px solid #bfdbfe' }}>
+            <div className="text-2xl font-black text-blue-700">#{userRank > 0 ? userRank : '—'}</div>
+            <div className="flex-1"><p className="text-xs text-blue-500 font-semibold">dari {totalArmy} army</p><p className="text-sm font-black text-blue-800">Rp{userPoints.toLocaleString('id-ID')} Penghasilan</p></div>
             <div className="text-xl">⭐</div>
           </div>
-
-          {miniRank.length > 0 && (
-            <div className="space-y-1.5">
-              {miniRank.map((entry, idx) => {
-                const isMe = entry.id === profile.id;
-                return (
-                  <div
-                    key={entry.id}
-                    className={`flex items-center gap-2.5 px-3 py-2 rounded-xl ${isMe ? 'bg-blue-50 border border-blue-100' : 'bg-gray-50'}`}>
-                    <span className="text-base w-5 text-center flex-shrink-0">{MEDALS[idx]}</span>
-                    <span className={`flex-1 text-xs font-semibold truncate ${isMe ? 'text-blue-700' : 'text-gray-700'}`}>
-                      {isMe ? 'Kamu' : entry.display_name}
-                    </span>
-                    <span className={`text-xs font-black ${isMe ? 'text-blue-600' : 'text-gray-500'}`}>
-                      {(entry.total_points || 0).toLocaleString('id-ID')}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+          {miniRank.length > 0 && (<div className="space-y-1.5">{miniRank.map((entry, idx) => { const isMe = entry.id === profile.id; return (<div key={entry.id} className={`flex items-center gap-2.5 px-3 py-2 rounded-xl ${isMe ? 'bg-blue-50 border border-blue-100' : 'bg-gray-50'}`}><span className="text-base w-5 text-center flex-shrink-0">{MEDALS[idx]}</span><span className={`flex-1 text-xs font-semibold truncate ${isMe ? 'text-blue-700' : 'text-gray-700'}`}>{isMe ? 'Kamu' : entry.display_name}</span><span className={`text-xs font-black ${isMe ? 'text-blue-600' : 'text-gray-500'}`}>{(entry.total_points || 0).toLocaleString('id-ID')}</span></div>); })}</div>)}
         </div>
-
-        {loading ? (
-          <div className="flex flex-col gap-3">
-            {[1, 2, 3].map(i => (
-              <div key={i} className="bg-white rounded-2xl p-4 shadow-sm animate-pulse">
-                <div className="h-4 bg-gray-200 rounded w-3/4 mb-3" />
-                <div className="h-3 bg-gray-200 rounded w-1/2 mb-2" />
-                <div className="h-3 bg-gray-200 rounded w-2/3" />
-              </div>
-            ))}
+        {loading ? (<div className="flex flex-col gap-3">{[1,2,3].map(i=>(<div key={i} className="bg-white rounded-2xl p-4 shadow-sm animate-pulse"><div className="h-4 bg-gray-200 rounded w-3/4 mb-3" /><div className="h-3 bg-gray-200 rounded w-1/2 mb-2" /><div className="h-3 bg-gray-200 rounded w-2/3" /></div>))}</div>
+        ) : tasks.length === 0 ? (<div className="flex flex-col items-center justify-center py-12"><div className="text-6xl mb-4">🎉</div><h3 className="text-lg font-bold text-gray-700 mb-2">Tidak ada misi hari ini!</h3><p className="text-gray-400 text-sm text-center">Santai dulu, gas besok!</p></div>
+        ) : (<div className="flex flex-col gap-3">
+          <div className={"mb-1 p-4 border-2 rounded-xl " + (karmaDone ? "bg-green-50 border-green-300" : "bg-orange-50 border-orange-200")}>
+            {karmaDone ? (<div><p className="text-sm font-bold text-green-800 mb-1">✅ Karma kamu cukup! Misi bayaran udah kebuka.</p><p className="text-xs text-green-700">Karma: {userKarma}. Lanjut kerjain misi cuan 👇</p></div>
+            ) : (<div>
+              <div className="flex items-center justify-between mb-2"><p className="font-bold text-orange-900 text-base">🎯 Misi Wajib #1: Bangun Karma Reddit Dulu</p><span className="bg-green-500 text-white text-xs font-bold px-2 py-1 rounded-full">+Rp5.000</span></div>
+              <p className="text-xs text-orange-800 mb-2">Akun Reddit kamu harus punya karma ≥10 biar ga di-ban.</p>
+              <div className="bg-white/60 rounded-lg p-2 mb-3"><div className="flex items-center justify-between text-xs mb-1"><span className="font-semibold text-orange-900">Karma: {userKarma} / 10</span></div><div className="w-full bg-orange-200 rounded-full h-2"><div className="bg-orange-500 h-2 rounded-full transition-all" style={{width: Math.min(100,(userKarma/10)*100)+'%'}}></div></div></div>
+              <details className="bg-white rounded-lg p-2 mb-1.5 cursor-pointer"><summary className="text-xs font-semibold text-orange-900">🐶 Cara 1 — Post hobby/passion content</summary><p className="text-xs text-gray-700 mt-1.5 pl-2">Foto anjing/kucing (r/dogs, r/cats), gaming (r/gaming), motor. Post global = karma cepat.</p></details>
+              <details className="bg-white rounded-lg p-2 mb-1.5 cursor-pointer"><summary className="text-xs font-semibold text-orange-900">🎬 Cara 2 — Komentar tulus di subreddit passion</summary><p className="text-xs text-gray-700 mt-1.5 pl-2">5-10 komentar tulus/hari = karma 50-200 dalam seminggu.</p></details>
+              <details className="bg-white rounded-lg p-2 mb-1.5 cursor-pointer"><summary className="text-xs font-semibold text-orange-900">💬 Cara 3 — Komentar Trending r/indonesia</summary><p className="text-xs text-gray-700 mt-1.5 pl-2">Buka r/indonesia → Hot. Komentar natural 5-10 thread. Tunggu 1-2 hari.</p></details>
+              <p className="text-xs text-orange-700 mt-2 italic">💡 Setelah karma ≥10, misi cuan otomatis kebuka + bonus Rp5.000.</p>
+            </div>)}
           </div>
-        ) : tasks.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12">
-            <div className="text-6xl mb-4 float-animation">🎉</div>
-            <h3 className="text-lg font-bold text-gray-700 mb-2">Tidak ada misi hari ini!</h3>
-            <p className="text-gray-400 text-sm text-center">Kamu udah keren banget hari ini.<br />Santai dulu, gas besok!</p>
-          </div>
-        ) : (
-          <div className="flex flex-col gap-3">
-            <div className={"mb-4 p-4 border-2 rounded-xl " + (karmaDone ? "bg-green-50 border-green-300" : "bg-orange-50 border-orange-200")}>
-              {karmaDone ? (
-                <div>
-                  <p className="text-sm font-bold text-green-800 mb-1">✅ Karma kamu cukup! Misi bayaran udah kebuka.</p>
-                  <p className="text-xs text-green-700">Karma akun utama: {topAccount?.karma ?? 0} (target: 10). Lanjut kerjain misi cuan di bawah 👇</p>
-                </div>
-              ) : (
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="font-bold text-orange-900 text-base">🎯 Misi Wajib #1: Bangun Karma Reddit Dulu</p>
-                    <span className="bg-green-500 text-white text-xs font-bold px-2 py-1 rounded-full">+Rp5.000</span>
-                  </div>
-                  <p className="text-xs text-orange-800 mb-2">Sebelum misi cuan kebuka, akun Reddit kamu harus punya karma ≥10 biar ga di-ban. Pilih cara paling gampang:</p>
-                  <div className="bg-white/60 rounded-lg p-2 mb-3">
-                    <div className="flex items-center justify-between text-xs mb-1">
-                      <span className="font-semibold text-orange-900">Karma kamu: {topAccount?.karma ?? 0} / 10</span>
-                      <span className="text-orange-700">{karmaDone ? '✅ done' : 'progress'}</span>
-                    </div>
-                    <div className="w-full bg-orange-200 rounded-full h-2">
-                      <div className="bg-orange-500 h-2 rounded-full transition-all" style={{width: Math.min(100, ((topAccount?.karma ?? 0) / 10) * 100) + '%'}}></div>
-                    </div>
-                  </div>
-                  <details className="bg-white rounded-lg p-2 mb-1.5 cursor-pointer">
-                    <summary className="text-xs font-semibold text-orange-900">🐶 Cara 1 — Post hobby/passion content (paling cepat naik karma)</summary>
-                    <p className="text-xs text-gray-700 mt-1.5 pl-2">Cari konten viral sesuai hobi: foto anjing/kucing lucu (r/dogs, r/cats, r/aww), gaming clips (r/gaming), motor/streetwear (r/motorcycles, r/streetwear), foto food (r/food). Post di subreddit hobby yang relevan — audience global = karma cepat masuk. Hindari posting cuma di r/Indonesia (audience kecil).</p>
-                  </details>
-                  <details className="bg-white rounded-lg p-2 mb-1.5 cursor-pointer">
-                    <summary className="text-xs font-semibold text-orange-900">🎬 Cara 2 — Komentar tulus di subreddit passion kamu</summary>
-                    <p className="text-xs text-gray-700 mt-1.5 pl-2">Buka subreddit hobby kamu (r/dogs, r/Kpop, r/gaming, r/motorcycles, dll) → urutkan by Hot. Kasih komentar yang tambah value: pengalaman pribadi, info berguna, atau humor relevan. 5-10 komentar tulus per hari = karma 50-200 dalam seminggu. Jangan spam atau copy-paste.</p>
-                  </details>
-                  <details className="bg-white rounded-lg p-2 mb-1.5 cursor-pointer">
-                    <summary className="text-xs font-semibold text-orange-900">💬 Cara 3 — Komentar Trending</summary>
-                    <p className="text-xs text-gray-700 mt-1.5 pl-2">Buka r/indonesia → urutkan by Hot. Komentar natural di 5-10 thread teratas (bukan spam, kasih opini beneran). Upvote 10+ post yang menarik. Tunggu 1-2 hari karma kebangun.</p>
-                  </details>
-                  <p className="text-xs text-orange-700 mt-2 italic">💡 Setelah karma ≥10, misi cuan di bawah otomatis kebuka + bonus Rp5.000 masuk wallet kamu.</p>
-                </div>
-              )}
+          {sortedAccessible.length > 0 && (<><p className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-1">✅ {sortedAccessible.length} Misi Bisa Dikerjakan</p>{sortedAccessible.map((task)=>(<TaskCard key={task.id} task={task} onKerjakan={()=>onKerjakan(task)} userKarma={userKarma} userAccountAge={userAccountAge} locked={false} />))}</>)}
+          {sortedLocked.length > 0 && (<>
+            <div className="mt-2 mb-1 rounded-xl px-4 py-3 flex items-start gap-2" style={{background:'linear-gradient(135deg,#f8fafc 0%,#f1f5f9 100%)',border:'1px solid #e2e8f0'}}>
+              <span className="text-base flex-shrink-0">🔒</span>
+              <div><p className="text-xs font-black text-gray-700">Misi premium — butuh karma & umur akun lebih tinggi</p><p className="text-xs text-gray-500 mt-0.5">Makin aktif di Reddit, makin cepat terbuka!</p></div>
             </div>
-                        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-1">
-              {tasks.length} Misi Cuan Aktif
-            </p>
-            {tasks.map((task) => (
-              <div key={task.id} className="relative">
-                <div className="">
-                  <TaskCard task={task} onKerjakan={() => onKerjakan(task)} />
-                </div>
-                {/* per-task karma gate handled in KerjakanTask */}
-              </div>
-            ))}
-          </div>
-        )}
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-1">🔒 {sortedLocked.length} Misi Belum Terbuka</p>
+            {sortedLocked.map((task)=>(<TaskCard key={task.id} task={task} onKerjakan={()=>{}} userKarma={userKarma} userAccountAge={userAccountAge} locked={true} />))}
+          </>)}
+          {sortedAccessible.length===0 && sortedLocked.length>0 && (<div className="flex flex-col items-center justify-center py-6 text-center"><div className="text-4xl mb-3">💪</div><p className="text-sm font-bold text-gray-600 mb-1">Semua misi butuh lebih banyak karma</p><p className="text-xs text-gray-400">Selesaikan Misi Wajib #1 dulu!</p></div>)}
+        </div>)}
       </div>
-
-      {showLeaderboard && (
-        <div className="fixed inset-0 z-50 flex flex-col bg-gray-50 max-w-md mx-auto">
-          <div className="flex items-center gap-2 px-4 pt-4 pb-2">
-            <button
-              onClick={() => setShowLeaderboard(false)}
-              className="w-9 h-9 rounded-xl bg-gray-100 flex items-center justify-center text-gray-600 font-bold text-lg">
-              ←
-            </button>
-            <span className="text-sm font-bold text-gray-600">Kembali</span>
-          </div>
-          <div className="flex-1 overflow-y-auto">
-            <Leaderboard currentUserId={profile.id} />
-          </div>
-        </div>
-      )}
+      {showLeaderboard && (<div className="fixed inset-0 z-50 flex flex-col bg-gray-50 max-w-md mx-auto"><div className="flex items-center gap-2 px-4 pt-4 pb-2"><button onClick={()=>setShowLeaderboard(false)} className="w-9 h-9 rounded-xl bg-gray-100 flex items-center justify-center text-gray-600 font-bold text-lg">←</button><span className="text-sm font-bold text-gray-600">Kembali</span></div><div className="flex-1 overflow-y-auto"><Leaderboard currentUserId={profile.id} /></div></div>)}
     </div>
   );
 }
 
 interface TaskCardProps {
-  task: Task;
+  task: GatedTask;
   onKerjakan: () => void;
+  userKarma: number;
+  userAccountAge: number;
+  locked: boolean;
 }
 
-function TaskCard({ task, onKerjakan }: TaskCardProps) {
+function TaskCard({ task, onKerjakan, userKarma, userAccountAge, locked }: TaskCardProps) {
   const redditAccount = task.reddit_accounts as { username: string } | null;
-  const isActionable = task.status === 'pending' || task.status === 'approved';
-
+  const isActionable = !locked && (task.status === 'pending' || task.status === 'approved');
+  const minKarma = task.min_karma ?? 0;
+  const minAge = task.min_account_age_days ?? 0;
+  const needsKarma = minKarma > 0;
+  const needsAge = minAge > 0;
+  const karmaShortfall = Math.max(0, minKarma - userKarma);
+  const ageShortfall = Math.max(0, minAge - userAccountAge);
   return (
-    <div
-      className={`bg-white rounded-2xl shadow-sm overflow-hidden transition-all duration-200 active:scale-[0.99] task-card-${task.priority}`}
-      style={{ boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
+    <div className={`bg-white rounded-2xl shadow-sm overflow-hidden transition-all duration-200 ${locked ? 'opacity-60' : 'active:scale-[0.99]'} task-card-${task.priority}`} style={{ boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
       <div className="p-4">
         <div className="flex items-start justify-between gap-2 mb-2">
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
-                {task.subreddit}
-              </span>
-              {redditAccount && (
-                <span className="text-xs text-gray-400 truncate">{redditAccount.username}</span>
-              )}
-            </div>
-            <p className="text-sm font-semibold text-gray-800 leading-snug">
-              {truncate(task.thread_title, 60)}
-            </p>
+            <div className="flex items-center gap-2 mb-1"><span className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">{task.subreddit}</span>{redditAccount && (<span className="text-xs text-gray-400 truncate">{redditAccount.username}</span>)}</div>
+            <p className="text-sm font-semibold text-gray-800 leading-snug">{truncate(task.thread_title, 60)}</p>
           </div>
-          <div className="text-right flex-shrink-0">
-            <p className="text-sm font-black text-emerald-600">Rp{(task.payment_amount / 1000).toFixed(0)}rb</p>
-          </div>
+          <div className="text-right flex-shrink-0"><p className="text-sm font-black text-emerald-600">Rp{(task.payment_amount/1000).toFixed(0)}rb</p></div>
         </div>
-
-        <div className="flex flex-wrap items-center gap-2 mb-3">
-          <StatusBadge status={task.status} />
-          <PriorityBadge priority={task.priority} />
-          {task.due_time && (
-            <span className="text-xs text-gray-400 font-medium">{formatDueTime(task.due_time)}</span>
-          )}
-        </div>
-
-        {isActionable && (
-          <button
-            onClick={onKerjakan}
-            className="w-full py-2.5 rounded-xl font-bold text-sm text-white transition-all duration-200 active:scale-95"
-            style={{
-              background: task.status === 'approved'
-                ? 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)'
-                : 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
-              boxShadow: task.status === 'approved'
-                ? '0 4px 16px rgba(34,197,94,0.3)'
-                : '0 4px 16px rgba(59,130,246,0.3)'
-            }}>
-            {task.status === 'approved' ? '🚀 Posting Sekarang!' : '✍️ Kerjakan'}
-          </button>
-        )}
-
-        {(task.status === 'submitted' || task.status === 'posted') && (
-          <button
-            onClick={onKerjakan}
-            className="w-full py-2.5 rounded-xl font-semibold text-sm text-gray-600 bg-gray-50 border border-gray-200 transition-all duration-200">
-            👁️ Lihat Detail
-          </button>
-        )}
+        <div className="flex flex-wrap items-center gap-2 mb-3"><StatusBadge status={task.status} /><PriorityBadge priority={task.priority} />{task.due_time && (<span className="text-xs text-gray-400 font-medium">{formatDueTime(task.due_time)}</span>)}</div>
+        {(needsKarma || needsAge) && (<div className="flex flex-wrap gap-1.5 mb-3">
+          {needsKarma && (<span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold ${karmaShortfall>0?'bg-red-50 text-red-600 border border-red-200':'bg-green-50 text-green-600 border border-green-200'}`}>⚡ Karma {karmaShortfall>0?`${userKarma}/${minKarma}`:`✓ ${minKarma}`}{karmaShortfall>0&&<span className="text-red-400 ml-0.5">(-{karmaShortfall})</span>}</span>)}
+          {needsAge && (<span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold ${ageShortfall>0?'bg-amber-50 text-amber-600 border border-amber-200':'bg-green-50 text-green-600 border border-green-200'}`}>📅 Akun {ageShortfall>0?`${userAccountAge}/${minAge} hari`:`✓ ${minAge}h`}{ageShortfall>0&&<span className="text-amber-400 ml-0.5">(-{ageShortfall}h)</span>}</span>)}
+        </div>)}
+        {locked ? (<div className="w-full py-2.5 rounded-xl font-bold text-sm text-gray-400 bg-gray-100 border border-gray-200 text-center flex items-center justify-center gap-1.5 cursor-not-allowed select-none">🔒 Belum Bisa Dikerjakan</div>
+        ) : (<>{isActionable && (<button onClick={onKerjakan} className="w-full py-2.5 rounded-xl font-bold text-sm text-white transition-all duration-200 active:scale-95" style={{background:task.status==='approved'?'linear-gradient(135deg,#22c55e 0%,#16a34a 100%)':'linear-gradient(135deg,#3b82f6 0%,#1d4ed8 100%)',boxShadow:task.status==='approved'?'0 4px 16px rgba(34,197,94,0.3)':'0 4px 16px rgba(59,130,246,0.3)'}}>{task.status==='approved'?'🚀 Posting Sekarang!':'✍️ Kerjakan'}</button>)}{(task.status==='submitted'||task.status==='posted')&&(<button onClick={onKerjakan} className="w-full py-2.5 rounded-xl font-semibold text-sm text-gray-600 bg-gray-50 border border-gray-200">👁️ Lihat Detail</button>)}</>)}
       </div>
     </div>
   );
