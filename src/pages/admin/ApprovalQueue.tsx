@@ -1,214 +1,246 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 
-type SubmissionRow = {
+type Submission = {
   id: string;
-  draft_text: string;
-  submitted_at: string;
-  tasks: {
-    id: string;
-    subreddit: string;
-    thread_title: string;
-    thread_url: string | null;
-    payment_amount: number;
-    priority: string;
-    profiles: { display_name: string } | null;
-    reddit_accounts: { username: string } | null;
-  } | null;
+  subreddit: string;
+  thread_title: string;
+  screenshot_url: string | null;
+  admin_brief: string | null;
+  submitted_at: string | null;
+  created_at: string;
+  status: string;
+  profiles?: { display_name: string } | null;
+  reddit_accounts?: { username: string } | null;
+  task_type?: string;
+  payment_amount?: number;
+  reward_amount?: number;
 };
 
-function truncate(s: string, n: number) { return s.length > n ? s.slice(0, n) + '...' : s; }
+const STATUS_FILTER = ['all', 'submitted', 'approved', 'rejected'] as const;
+const STATUS_LABEL: Record<string, { label: string; bg: string; color: string }> = {
+  submitted: { label: 'Direview', bg: '#dbeafe', color: '#1d4ed8' },
+  approved:  { label: 'Disetujui', bg: '#dcfce7', color: '#15803d' },
+  rejected:  { label: 'Ditolak', bg: '#fee2e2', color: '#b91c1c' },
+  pending:   { label: 'Menunggu', bg: '#f1f5f9', color: '#475569' },
+};
 
-function timeAgo(ts: string): string {
+function relTime(ts: string) {
   const diff = (Date.now() - new Date(ts).getTime()) / 1000;
   if (diff < 60) return 'baru saja';
   if (diff < 3600) return `${Math.floor(diff / 60)}m lalu`;
   if (diff < 86400) return `${Math.floor(diff / 3600)}j lalu`;
-  return `${Math.floor(diff / 86400)}h lalu`;
+  return `${Math.floor(diff / 86400)} hari lalu`;
 }
 
 export default function ApprovalQueue() {
-  const [submissions, setSubmissions] = useState<SubmissionRow[]>([]);
+  const [items, setItems] = useState<Submission[]>([]);
   const [loading, setLoading] = useState(true);
-  const [rejectingId, setRejectingId] = useState<string | null>(null);
-  const [rejectReason, setRejectReason] = useState('');
-  const [processingId, setProcessingId] = useState<string | null>(null);
-  const [batchProcessing, setBatchProcessing] = useState(false);
-  const [filterMember, setFilterMember] = useState('all');
+  const [filter, setFilter] = useState<'all' | 'submitted' | 'approved' | 'rejected'>('submitted');
+  const [processing, setProcessing] = useState<string | null>(null);
+  const [preview, setPreview] = useState<Submission | null>(null);
 
-  useEffect(() => { loadSubmissions(); }, []);
+  useEffect(() => { load(); }, []);
 
-  async function loadSubmissions() {
+  async function load() {
     setLoading(true);
     const { data } = await supabase
-      .from('task_submissions')
-      .select(`
-        id, draft_text, submitted_at,
-        tasks!inner(
-          id, subreddit, thread_title, thread_url, payment_amount, priority, status,
-          profiles(display_name),
-          reddit_accounts(username)
-        )
-      `)
-      .eq('tasks.status', 'submitted')
-      .order('submitted_at', { ascending: true });
-    if (data) setSubmissions(data as unknown as SubmissionRow[]);
+      .from('tasks')
+      .select('*, profiles(display_name), reddit_accounts(username)')
+      .in('status', ['submitted', 'approved', 'rejected'])
+      .order('created_at', { ascending: false });
+    setItems((data || []) as Submission[]);
     setLoading(false);
   }
 
-  async function handleApprove(submission: SubmissionRow) {
-    if (!submission.tasks) return;
-    setProcessingId(submission.id);
-    await supabase.from('tasks').update({ status: 'approved', updated_at: new Date().toISOString() }).eq('id', submission.tasks.id);
-    await supabase.from('task_submissions').update({ reviewed_at: new Date().toISOString() }).eq('id', submission.id);
-    setSubmissions(prev => prev.filter(s => s.id !== submission.id));
-    setProcessingId(null);
-  }
-
-  async function handleReject(submission: SubmissionRow) {
-    if (!submission.tasks) return;
-    setProcessingId(submission.id);
-    await supabase.from('tasks').update({ status: 'rejected', updated_at: new Date().toISOString() }).eq('id', submission.tasks.id);
-    await supabase.from('task_submissions').update({
-      reviewed_at: new Date().toISOString(),
-      reviewer_notes: rejectReason || 'Ditolak oleh admin',
-    }).eq('id', submission.id);
-    setSubmissions(prev => prev.filter(s => s.id !== submission.id));
-    setRejectingId(null);
-    setRejectReason('');
-    setProcessingId(null);
-  }
-
-  async function handleApproveAll() {
-    setBatchProcessing(true);
-    const toApprove = filterMember === 'all' ? submissions : submissions.filter(s => (s.tasks?.profiles as any)?.display_name === filterMember);
-    for (const sub of toApprove) {
-      if (!sub.tasks) continue;
-      await supabase.from('tasks').update({ status: 'approved', updated_at: new Date().toISOString() }).eq('id', sub.tasks.id);
-      await supabase.from('task_submissions').update({ reviewed_at: new Date().toISOString() }).eq('id', sub.id);
+  async function handleAction(id: string, action: 'approve' | 'reject') {
+    setProcessing(id);
+    const newStatus = action === 'approve' ? 'approved' : 'rejected';
+    await supabase.from('tasks').update({ status: newStatus }).eq('id', id);
+    if (action === 'approve') {
+      const task = items.find(t => t.id === id);
+      if (task) {
+        const amount = task.reward_amount || task.payment_amount || 0;
+        if (amount > 0) {
+          const profile = task.profiles as { display_name: string } | null;
+          if (profile) {
+            const { data: pData } = await supabase.from('profiles').select('id').eq('display_name', profile.display_name).maybeSingle();
+            if (pData) {
+              await supabase.from('earnings').insert({
+                army_member_id: pData.id,
+                task_id: id,
+                amount,
+                status: 'pending',
+              });
+            }
+          }
+        }
+      }
     }
-    await loadSubmissions();
-    setBatchProcessing(false);
+    setProcessing(null);
+    setPreview(null);
+    load();
   }
 
-  const allMembers = Array.from(new Set(submissions.map(s => (s.tasks?.profiles as any)?.display_name).filter(Boolean)));
-  const filtered = filterMember === 'all' ? submissions : submissions.filter(s => (s.tasks?.profiles as any)?.display_name === filterMember);
+  const filtered = filter === 'all' ? items : items.filter(i => i.status === filter);
+
+  const counts = {
+    all: items.length,
+    submitted: items.filter(i => i.status === 'submitted').length,
+    approved: items.filter(i => i.status === 'approved').length,
+    rejected: items.filter(i => i.status === 'rejected').length,
+  };
 
   return (
-    <div className="flex flex-col min-h-full bg-gray-50">
-      <div className="px-4 pt-5 pb-4"
-        style={{ background: 'linear-gradient(160deg, #0f172a 0%, #1e3a8a 60%, #2563eb 100%)', borderRadius: '0 0 24px 24px' }}>
-        <div className="flex items-center justify-between mb-2">
-          <div>
-            <h1 className="text-xl font-black text-white">Approval Queue ✅</h1>
-            <p className="text-blue-300 text-xs">{submissions.length} draft menunggu review</p>
-          </div>
-          {submissions.length > 0 && (
-            <button onClick={handleApproveAll} disabled={batchProcessing}
-              className="px-3 py-2 rounded-xl text-xs font-bold text-white disabled:opacity-60"
-              style={{ background: 'rgba(34,197,94,0.3)', border: '1px solid rgba(34,197,94,0.5)' }}>
-              {batchProcessing ? '⏳' : '✅ Approve Semua'}
-            </button>
-          )}
-        </div>
+    <div style={{ padding: '28px 32px', maxWidth: 1200 }}>
+      {/* Header */}
+      <div style={{ marginBottom: 24 }}>
+        <h1 style={{ fontSize: 24, fontWeight: 900, color: '#0f172a', margin: 0 }}>Antrian Persetujuan</h1>
+        <p style={{ color: '#64748b', marginTop: 4, fontSize: 14 }}>Review dan setujui submission dari anggota</p>
       </div>
 
-      <div className="px-4 py-3 flex gap-2 overflow-x-auto">
-        {['all', ...allMembers].map(m => (
-          <button key={m} onClick={() => setFilterMember(m)}
-            className={`flex-shrink-0 px-3 py-1 rounded-full text-xs font-semibold transition-all ${filterMember === m ? 'bg-slate-800 text-white' : 'bg-white text-gray-500 border border-gray-200'}`}>
-            {m === 'all' ? `Semua (${submissions.length})` : m}
+      {/* Filter Tabs */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+        {STATUS_FILTER.map(s => (
+          <button
+            key={s}
+            onClick={() => setFilter(s)}
+            style={{
+              padding: '6px 16px', borderRadius: 20, border: 'none', cursor: 'pointer',
+              fontSize: 13, fontWeight: 600,
+              background: filter === s ? '#0f172a' : 'white',
+              color: filter === s ? 'white' : '#64748b',
+              boxShadow: filter === s ? 'none' : '0 1px 4px rgba(0,0,0,0.08)',
+            }}
+          >
+            {s === 'all' ? 'Semua' : STATUS_LABEL[s]?.label || s}
+            <span style={{ marginLeft: 6, opacity: 0.7 }}>({counts[s]})</span>
           </button>
         ))}
       </div>
 
-      <div className="flex-1 px-4 pb-24 space-y-3">
+      {/* Table */}
+      <div style={{ background: 'white', borderRadius: 14, boxShadow: '0 1px 8px rgba(0,0,0,0.06)', overflow: 'hidden' }}>
         {loading ? (
-          Array(3).fill(0).map((_, i) => <div key={i} className="bg-white rounded-2xl h-36 animate-pulse" />)
+          <div style={{ padding: 60, textAlign: 'center', color: '#94a3b8' }}>Memuat...</div>
         ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16">
-            <div className="text-5xl mb-3">🎉</div>
-            <p className="text-gray-600 font-bold text-base">Semua bersih!</p>
-            <p className="text-gray-400 text-sm">Tidak ada draft yang perlu direview</p>
+          <div style={{ padding: 60, textAlign: 'center', color: '#94a3b8' }}>
+            <div style={{ fontSize: 40, marginBottom: 8 }}>ð½</div>
+            <p>Tidak ada submission</p>
           </div>
         ) : (
-          filtered.map(sub => {
-            const task = sub.tasks;
-            if (!task) return null;
-            const memberName = (task.profiles as any)?.display_name || '—';
-            const accountName = (task.reddit_accounts as any)?.username || '—';
-            const isProcessing = processingId === sub.id;
-            const isRejecting = rejectingId === sub.id;
-            return (
-              <div key={sub.id} className="bg-white rounded-2xl shadow-sm overflow-hidden"
-                style={{ boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
-                <div className="p-4">
-                  <div className="flex items-start justify-between gap-2 mb-2">
-                    <div>
-                      <div className="flex items-center gap-1.5 mb-0.5">
-                        <span className="text-xs font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded-full">{task.subreddit}</span>
-                        <span className="text-xs text-gray-400">{timeAgo(sub.submitted_at)}</span>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ background: '#f8fafc' }}>
+                {['Anggota', 'Subreddit', 'Thread', 'Akun Reddit', 'Waktu', 'Status', 'Aksi'].map(h => (
+                  <th key={h} style={{ padding: '11px 20px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((item, i) => {
+                const sc = STATUS_LABEL[item.status] || STATUS_LABEL.pending;
+                const member = (item.profiles as { display_name: string } | null)?.display_name || 'â';
+                const account = (item.reddit_accounts as { username: string } | null)?.username || 'â';
+                const isProcessing = processing === item.id;
+                return (
+                  <tr key={item.id} style={{ borderTop: i > 0 ? '1px solid #f1f5f9' : 'none', transition: 'background 0.15s' }}
+                    onMouseEnter={e => (e.currentTarget.style.background = '#f8fafc')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                  >
+                    <td style={{ padding: '12px 20px', fontSize: 13, fontWeight: 600, color: '#1e293b' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <div style={{
+                          width: 28, height: 28, borderRadius: 8, background: 'linear-gradient(135deg,#6366f1,#8b5cf6)',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: 12, fontWeight: 800, flexShrink: 0,
+                        }}>{member.slice(0, 1)}</div>
+                        {member}
                       </div>
-                      <p className="text-sm font-bold text-gray-800">{truncate(task.thread_title, 50)}</p>
-                      <p className="text-xs text-gray-400 mt-0.5">👤 {memberName} · {accountName}</p>
-                    </div>
-                    <p className="text-sm font-black text-emerald-600 flex-shrink-0">Rp{(task.payment_amount/1000).toFixed(0)}rb</p>
-                  </div>
-
-                  <div className="rounded-xl p-3 mb-3" style={{ background: '#f8fafc', border: '1px solid #e2e8f0' }}>
-                    <p className="text-xs text-gray-500 font-semibold mb-1">Draft Komentar:</p>
-                    <p className="text-sm text-gray-700 leading-relaxed">{sub.draft_text}</p>
-                  </div>
-
-                  {task.thread_url && (
-                    <a href={task.thread_url} target="_blank" rel="noopener noreferrer"
-                      className="text-xs text-blue-500 font-semibold hover:text-blue-700 mb-3 block">
-                      🔗 Lihat Thread ↗
-                    </a>
-                  )}
-
-                  {isRejecting ? (
-                    <div className="space-y-2">
-                      <textarea
-                        value={rejectReason}
-                        onChange={e => setRejectReason(e.target.value)}
-                        placeholder="Alasan penolakan (opsional)..."
-                        rows={2}
-                        className="w-full px-3 py-2 rounded-xl border border-red-200 text-sm focus:outline-none focus:border-red-400 resize-none bg-red-50"
-                      />
-                      <div className="flex gap-2">
-                        <button onClick={() => setRejectingId(null)}
-                          className="flex-1 py-2 rounded-xl font-semibold text-sm text-gray-600 bg-gray-100">
-                          Batal
-                        </button>
-                        <button onClick={() => handleReject(sub)} disabled={isProcessing}
-                          className="flex-1 py-2 rounded-xl font-bold text-sm text-white bg-red-500 disabled:opacity-50">
-                          {isProcessing ? '⏳' : '❌ Tolak'}
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => setRejectingId(sub.id)}
-                        className="flex-1 py-2.5 rounded-xl font-bold text-sm text-red-600 bg-red-50 border border-red-200 transition-all active:scale-95">
-                        ❌ Tolak
-                      </button>
-                      <button
-                        onClick={() => handleApprove(sub)}
-                        disabled={isProcessing}
-                        className="flex-1 py-2.5 rounded-xl font-bold text-sm text-white transition-all active:scale-95 disabled:opacity-50"
-                        style={{ background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)', boxShadow: '0 4px 12px rgba(34,197,94,0.3)' }}>
-                        {isProcessing ? '⏳ Memproses...' : '✅ Setujui'}
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-          })
+                    </td>
+                    <td style={{ padding: '12px 20px' }}>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: '#6366f1', background: '#eef2ff', padding: '2px 8px', borderRadius: 12 }}>{item.subreddit}</span>
+                    </td>
+                    <td style={{ padding: '12px 20px', fontSize: 13, color: '#334155', maxWidth: 240 }}>
+                      <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.thread_title}</div>
+                      {item.screenshot_url && (
+                        <a href={item.screenshot_url} target="_blank" rel="noopener noreferrer"
+                          style={{ fontSize: 11, color: '#6366f1', textDecoration: 'none' }}>ð· Lihat screenshot</a>
+                      )}
+                    </td>
+                    <td style={{ padding: '12px 20px', fontSize: 13, color: '#64748b' }}>{account}</td>
+                    <td style={{ padding: '12px 20px', fontSize: 12, color: '#94a3b8', whiteSpace: 'nowrap' }}>{relTime(item.created_at)}</td>
+                    <td style={{ padding: '12px 20px' }}>
+                      <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 20, background: sc.bg, color: sc.color }}>{sc.label}</span>
+                    </td>
+                    <td style={{ padding: '12px 20px' }}>
+                      {item.status === 'submitted' ? (
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          <button
+                            onClick={() => handleAction(item.id, 'approve')}
+                            disabled={isProcessing}
+                            style={{
+                              padding: '5px 12px', borderRadius: 8, border: 'none', cursor: 'pointer',
+                              background: '#dcfce7', color: '#15803d', fontSize: 12, fontWeight: 700,
+                              opacity: isProcessing ? 0.5 : 1,
+                            }}>
+                            {isProcessing ? '...' : 'â Setuju'}
+                          </button>
+                          <button
+                            onClick={() => handleAction(item.id, 'reject')}
+                            disabled={isProcessing}
+                            style={{
+                              padding: '5px 12px', borderRadius: 8, border: 'none', cursor: 'pointer',
+                              background: '#fee2e2', color: '#b91c1c', fontSize: 12, fontWeight: 700,
+                              opacity: isProcessing ? 0.5 : 1,
+                            }}>
+                            {isProcessing ? '...' : 'â Tolak'}
+                          </button>
+                          {item.admin_brief && (
+                            <button
+                              onClick={() => setPreview(item)}
+                              style={{ padding: '5px 12px', borderRadius: 8, border: 'none', cursor: 'pointer', background: '#f1f5f9', color: '#475569', fontSize: 12, fontWeight: 700 }}>
+                              Brief
+                            </button>
+                          )}
+                        </div>
+                      ) : (
+                        <span style={{ fontSize: 12, color: '#94a3b8' }}>â</span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         )}
       </div>
+
+      {/* Brief Preview Modal */}
+      {preview && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}
+          onClick={() => setPreview(null)}>
+          <div style={{ background: 'white', borderRadius: 18, padding: 28, maxWidth: 480, width: '90%' }} onClick={e => e.stopPropagation()}>
+            <h3 style={{ fontSize: 16, fontWeight: 800, color: '#0f172a', marginTop: 0, marginBottom: 12 }}>Brief Task</h3>
+            <div style={{ background: '#f8fafc', borderRadius: 10, padding: '12px 16px', fontSize: 13, color: '#334155', lineHeight: 1.6, marginBottom: 16 }}>
+              {preview.admin_brief}
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={() => { setPreview(null); handleAction(preview.id, 'approve'); }}
+                style={{ flex: 1, padding: 10, borderRadius: 10, border: 'none', background: '#dcfce7', color: '#15803d', fontWeight: 700, cursor: 'pointer', fontSize: 13 }}>
+                â Setuju
+              </button>
+              <button onClick={() => { setPreview(null); handleAction(preview.id, 'reject'); }}
+                style={{ flex: 1, padding: 10, borderRadius: 10, border: 'none', background: '#fee2e2', color: '#b91c1c', fontWeight: 700, cursor: 'pointer', fontSize: 13 }}>
+                â Tolak
+              </button>
+              <button onClick={() => setPreview(null)}
+                style={{ padding: '10px 16px', borderRadius: 10, border: 'none', background: '#f1f5f9', color: '#64748b', fontWeight: 700, cursor: 'pointer', fontSize: 13 }}>
+                Tutup
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
