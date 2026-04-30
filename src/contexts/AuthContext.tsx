@@ -77,6 +77,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { error: profileError } = await supabase.from('profiles').insert({
         id: data.user.id,
         display_name: displayName,
+        whatsapp_number: whatsappNumber || null,
         role: 'army',
         level: 1,
         referred_by_code: new URLSearchParams(window.location.search).get('ref'),
@@ -84,12 +85,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (profileError) {
         setLoading(false);
         return profileError.message;
-      }
-      // Save whatsapp number to profiles
-      if (whatsappNumber) {
-        await supabase.from('profiles').update({
-          whatsapp_number: whatsappNumber,
-        }).eq('id', data.user.id);
       }
       await loadProfile(data.user.id);
       // Sync to Google Sheet (fire-and-forget, never block auth)
@@ -101,7 +96,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   function triggerGSheetSync() {
     const url = import.meta.env.VITE_GSHEET_WEBHOOK_URL;
     if (!url) return;
-    // Fire-and-forget: GAS v3 pulls fresh data from Supabase â triggers syncProfilesOnly
+    // Fire-and-forget: GAS v3 pulls fresh data from Supabase — triggers syncProfilesOnly
     fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
