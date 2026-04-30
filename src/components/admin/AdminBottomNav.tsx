@@ -1,53 +1,74 @@
-type AdminPage = 'dashboard' | 'accounts' | 'tasks' | 'approvals' | 'team' | 'payroll' | 'settings' | 'feedback';
+import { type AdminPage } from '../../pages/admin/AdminShell';
 
-interface AdminBottomNavProps {
-  active: AdminPage;
-  onChange: (page: AdminPage) => void;
-  pendingApprovals?: number;
-}
-
-const navItems: { id: AdminPage; icon: string; label: string }[] = [
-  { id: 'dashboard', icon: '📊', label: 'Dashboard' },
-  { id: 'accounts', icon: '🔑', label: 'Akun' },
-  { id: 'tasks', icon: '📋', label: 'Tasks' },
-  { id: 'approvals', icon: '✅', label: 'Approval' },
-  { id: 'team', icon: '👥', label: 'Tim' },
-  { id: 'payroll', icon: '💳', label: 'Payroll' },
-  { id: 'feedback', icon: '📣', label: 'Laporan' },
-  { id: 'settings', icon: '⚙️', label: 'Setting' },
+const NAV_ITEMS: { page: AdminPage; label: string; icon: string }[] = [
+  { page: 'dashboard',  label: 'Dashboard',    icon: 'ð ' },
+  { page: 'approvals',  label: 'Persetujuan',  icon: 'â' },
+  { page: 'accounts',   label: 'Akun Reddit',  icon: 'ð' },
+  { page: 'tasks',      label: 'Task Queue',   icon: 'ð' },
+  { page: 'team',       label: 'Tim',          icon: 'ð¥' },
+  { page: 'payroll',    label: 'Payroll',      icon: 'ð³' },
+  { page: 'feedback',   label: 'Feedback',     icon: 'ð¬' },
+  { page: 'settings',   label: 'Pengaturan',   icon: 'âï¸' },
 ];
 
-export default function AdminBottomNav({ active, onChange, pendingApprovals = 0 }: AdminBottomNavProps) {
+interface Props {
+  active: AdminPage;
+  onChange: (p: AdminPage) => void;
+  pendingApprovals: number;
+}
+
+export default function AdminBottomNav({ active, onChange, pendingApprovals }: Props) {
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 max-w-2xl mx-auto"
-      style={{ background: 'rgba(255,255,255,0.97)', backdropFilter: 'blur(20px)', borderTop: '1px solid rgba(0,0,0,0.08)' }}>
-      <div className="flex items-center justify-around px-1 py-1.5 overflow-x-auto">
-        {navItems.map((item) => {
-          const isActive = active === item.id;
-          const hasBadge = item.id === 'approvals' && pendingApprovals > 0;
+    <aside
+      className="flex-shrink-0 flex flex-col"
+      style={{
+        width: 232,
+        background: '#0f172a',
+        height: '100vh',
+        position: 'sticky',
+        top: 0,
+        overflowY: 'auto',
+      }}
+    >
+      {/* Logo */}
+      <div className="px-5 py-5 border-b border-white/10">
+        <p className="text-white font-black text-lg tracking-tight">âï¸ KomentarKu</p>
+        <p className="text-slate-400 text-xs font-medium mt-0.5">Admin Panel</p>
+      </div>
+
+      {/* Nav Items */}
+      <nav className="flex-1 px-3 py-4 space-y-1">
+        {NAV_ITEMS.map(item => {
+          const isActive = active === item.page;
           return (
             <button
-              key={item.id}
-              onClick={() => onChange(item.id)}
-              className={`relative flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl transition-all duration-150 flex-shrink-0 ${isActive ? 'bg-slate-100' : ''}`}
-              style={{ minWidth: 40 }}>
-              <span className={`text-xl transition-transform duration-150 ${isActive ? 'scale-110' : 'scale-100'}`}>
-                {item.icon}
-              </span>
-              <span className={`text-[9px] font-semibold transition-colors ${isActive ? 'text-slate-800' : 'text-gray-400'}`}>
-                {item.label}
-              </span>
-              {hasBadge && (
-                <span className="absolute -top-0.5 right-1 w-4 h-4 rounded-full bg-red-500 flex items-center justify-center text-[9px] font-black text-white">
-                  {pendingApprovals > 9 ? '9+' : pendingApprovals}
+              key={item.page}
+              onClick={() => onChange(item.page)}
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all text-left"
+              style={{
+                background: isActive ? 'rgba(99,102,241,0.18)' : 'transparent',
+                color: isActive ? '#a5b4fc' : '#94a3b8',
+              }}
+            >
+              <span className="text-base w-5 text-center">{item.icon}</span>
+              <span className="flex-1">{item.label}</span>
+              {item.page === 'approvals' && pendingApprovals > 0 && (
+                <span
+                  className="text-xs font-black px-1.5 py-0.5 rounded-full"
+                  style={{ background: '#ef4444', color: 'white', minWidth: 20, textAlign: 'center' }}
+                >
+                  {pendingApprovals}
                 </span>
               )}
             </button>
           );
         })}
+      </nav>
+
+      {/* Footer */}
+      <div className="px-5 py-4 border-t border-white/10">
+        <p className="text-slate-500 text-xs">v1.0 Â· Admin Only</p>
       </div>
-    </div>
+    </aside>
   );
 }
-
-export type { AdminPage };
