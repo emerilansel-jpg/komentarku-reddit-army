@@ -92,7 +92,7 @@ export default function TaskQueue() {
         <div>
           <h1 style={{ fontSize: 24, fontWeight: 900, color: '#0f172a', margin: 0 }}>Task Queue</h1>
           <p style={{ color: '#64748b', marginTop: 4, fontSize: 14 }}>
-            {tasks.length} misi total Â· {counts.pending || 0} belum dikerjakan
+            {tasks.length} misi total · {counts.pending || 0} belum dikerjakan
           </p>
         </div>
         <button
@@ -125,7 +125,7 @@ export default function TaskQueue() {
           <div style={{ padding: 60, textAlign: 'center', color: '#94a3b8' }}>Memuat...</div>
         ) : filtered.length === 0 ? (
           <div style={{ padding: 60, textAlign: 'center', color: '#94a3b8' }}>
-            <div style={{ fontSize: 36, marginBottom: 8 }}>ð­</div>
+            <div style={{ fontSize: 36, marginBottom: 8 }}>📭</div>
             <p>Tidak ada task</p>
           </div>
         ) : (
@@ -142,8 +142,8 @@ export default function TaskQueue() {
                 const pc = PRIORITY_CFG[task.priority] || PRIORITY_CFG.normal;
                 const sc = STATUS_CFG[task.status] || STATUS_CFG.pending;
                 const tc = TASK_TYPE_CFG[task.task_type] || TASK_TYPE_CFG.comment;
-                const member = (task.profiles as { display_name: string } | null)?.display_name || 'â';
-                const deadline = task.due_time ? new Date(task.due_time).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'â';
+                const member = (task.profiles as { display_name: string } | null)?.display_name || '—';
+                const deadline = task.due_time ? new Date(task.due_time).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—';
                 return (
                   <tr key={task.id} style={{ borderTop: i > 0 ? '1px solid #f1f5f9' : 'none' }}
                     onMouseEnter={e => (e.currentTarget.style.background = '#f8fafc')}
@@ -158,7 +158,7 @@ export default function TaskQueue() {
                       </div>
                       {task.thread_url && (
                         <a href={task.thread_url} target="_blank" rel="noopener noreferrer"
-                          style={{ fontSize: 11, color: '#6366f1', textDecoration: 'none' }}>ð Buka</a>
+                          style={{ fontSize: 11, color: '#6366f1', textDecoration: 'none' }}>🔗 Buka</a>
                       )}
                     </td>
                     <td style={{ padding: '11px 16px' }}>
@@ -272,7 +272,7 @@ function CreateTaskModal({ members, accounts, onClose, onCreated }: {
             })}
           </div>
           <div style={{ marginTop: 8, padding: '8px 12px', borderRadius: 8, background: '#f0fdf4', fontSize: 12, color: '#16a34a', fontWeight: 700 }}>
-            ð° Reward per slot: Rp{reward.toLocaleString('id-ID')}
+            💰 Reward per slot: Rp{reward.toLocaleString('id-ID')}
           </div>
         </div>
 
@@ -320,14 +320,14 @@ function CreateTaskModal({ members, accounts, onClose, onCreated }: {
           <div>
             <label style={{ fontSize: 12, fontWeight: 700, color: '#475569', display: 'block', marginBottom: 6 }}>Tugaskan ke</label>
             <select value={form.assigned_to} onChange={e => set('assigned_to', e.target.value)} style={inputStyle}>
-              <option value="">â Auto-assign â</option>
+              <option value="">— Auto-assign —</option>
               {members.map(m => <option key={m.id} value={m.id}>{m.display_name}</option>)}
             </select>
           </div>
           <div>
             <label style={{ fontSize: 12, fontWeight: 700, color: '#475569', display: 'block', marginBottom: 6 }}>Akun Reddit</label>
             <select value={form.reddit_account_id} onChange={e => set('reddit_account_id', e.target.value)} style={inputStyle}>
-              <option value="">â Pilih akun â</option>
+              <option value="">— Pilih akun —</option>
               {accounts.map(a => <option key={a.id} value={a.id}>{a.username}</option>)}
             </select>
           </div>
