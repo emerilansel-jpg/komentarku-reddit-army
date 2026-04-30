@@ -425,6 +425,10 @@ export default function OnboardingFlow({ onComplete }: { onComplete?: () => void
               <p className="text-slate-300 text-sm">
                 Misi Pertama kamu — <b>Bangun Karma Reddit</b> — sudah menunggu di dashboard 💪
               </p>
+              <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-3 text-left">
+                <p className="text-xs font-bold text-blue-300 mb-1">💡 Tips: Cara Unlock Lebih Banyak Misi</p>
+                <p className="text-xs text-slate-400">Beberapa misi cuan punya syarat karma &amp; umur akun Reddit minimal. Makin sering kamu aktif post &amp; komentar di Reddit, makin banyak misi premium yang bisa kamu akses — dan makin besar penghasilan kamu!</p>
+              </div>
               <button
                 onClick={handleFinish}
                 className="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-900 font-bold py-4 rounded-xl text-lg transition"
