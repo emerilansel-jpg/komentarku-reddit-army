@@ -15,6 +15,19 @@ import OnboardingFlow from './components/army/OnboardingFlow';
 import Leaderboard from './components/army/Leaderboard';
 
 const IS_ADMIN_ROUTE = window.location.pathname.startsWith('/peta-admin');
+const IS_STAGING = window.location.hostname.includes('staging');
+
+function StagingBanner() {
+  if (!IS_STAGING) return null;
+  return (
+    <div
+      className="fixed top-0 left-0 right-0 z-50 flex items-center justify-center gap-1.5 py-1.5 text-xs font-bold text-white"
+      style={{ background: 'linear-gradient(90deg, #dc2626 0%, #ea580c 100%)', minHeight: '28px' }}
+    >
+      ⚠️ STAGING — Perubahan di sini belum live ke production
+    </div>
+  );
+}
 
 function AppInner() {
   const { user, profile, loading, signOut } = useAuth();
@@ -71,11 +84,7 @@ function AppInner() {
   if (selectedTask) {
     return (
       <div className="min-h-screen bg-gray-50 max-w-md mx-auto">
-        <KerjakanTask
-          task={selectedTask}
-          profile={profile}
-          onBack={() => setSelectedTask(null)}
-        />
+        <KerjakanTask task={selectedTask} profile={profile} onBack={() => setSelectedTask(null)} />
       </div>
     );
   }
@@ -92,15 +101,10 @@ function AppInner() {
     <div className="min-h-screen max-w-md mx-auto relative" style={{ background: '#f0f4ff' }}>
       <div className="pb-20">
         {activePage === 'tasks' && (
-          <TugasHariIni
-            profile={profile}
-            onKerjakan={(task) => setSelectedTask(task)}
-          />
+          <TugasHariIni profile={profile} onKerjakan={(task) => setSelectedTask(task)} />
         )}
         {activePage === 'leaderboard' && (
-          <Leaderboard
-            currentUserId={profile.id}
-          />
+          <Leaderboard currentUserId={profile.id} />
         )}
         {activePage === 'accounts' && (
           <AkunSaya profile={profile} onSignOut={signOut} />
@@ -109,19 +113,18 @@ function AppInner() {
           <Penghasilan profile={profile} onWithdraw={() => setActivePage('withdraw')} />
         )}
       </div>
-
-      <BottomNav
-        active={activePage}
-        onChange={setActivePage}
-      />
+      <BottomNav active={activePage} onChange={setActivePage} />
     </div>
   );
 }
 
 export default function App() {
   return (
-    <AuthProvider>
-      <AppInner />
-    </AuthProvider>
+    <>
+      <StagingBanner />
+      <AuthProvider>
+        <AppInner />
+      </AuthProvider>
+    </>
   );
 }
