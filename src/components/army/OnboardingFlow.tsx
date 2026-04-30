@@ -55,7 +55,29 @@ export default function OnboardingFlow({ onComplete }: { onComplete?: () => void
 
   const persistStep = async (next: number) => {
     if (!user) return;
-    await supabase.from('army_profiles').update({ onboarding_step: next }).eq('user_id', user.id);
+    await supabase.from('profiles').update({ onboarding_step: next }).eq('id', user.id);
+  };
+
+  // FIX R43: record step bonus into earnings table so Penghasilan page shows it
+  const recordStepBonus = async (stepIndex: number, amount: number) => {
+    if (!user || amount <= 0) return;
+    const { data: existing } = await supabase
+      .from('earnings')
+      .select('id')
+      .eq('army_member_id', user.id)
+      .eq('type', 'onboarding')
+      .eq('description', STEPS[stepIndex].title)
+      .maybeSingle();
+    if (existing) return;
+    await supabase.from('earnings').insert({
+      army_member_id: user.id,
+      task_id: null,
+      amount,
+      status: 'paid',
+      type: 'onboarding',
+      description: STEPS[stepIndex].title,
+      paid_at: new Date().toISOString(),
+    });
   };
 
   const fire = () => confetti({ particleCount: 120, spread: 70, origin: { y: 0.6 } });
@@ -64,10 +86,16 @@ export default function OnboardingFlow({ onComplete }: { onComplete?: () => void
   const stepBonus = STEPS[step]?.bonus ?? 0;
 
   const goNext = async () => {
+    const currentStepIndex = step;
+    const currentBonus = STEPS[currentStepIndex]?.bonus ?? 0;
     const next = Math.min(step + 1, STEPS.length - 1);
     setStep(next);
     fire();
+    // FIX R43: persist to profiles (not army_profiles VIEW) + record bonus to earnings
     await persistStep(next);
+    if (currentBonus > 0) {
+      await recordStepBonus(currentStepIndex, currentBonus);
+    }
   };
 
   const goBack = async () => {
