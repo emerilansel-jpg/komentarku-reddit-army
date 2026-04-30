@@ -52,6 +52,11 @@ export type Task = {
   payment_amount: number;
   created_at: string;
   updated_at: string;
+  min_karma?: number;
+  min_account_age_days?: number;
+  draft_content?: string | null;
+  quantity?: number | null;
+  completed_count?: number | null;
   reddit_accounts?: RedditAccount;
 };
 
