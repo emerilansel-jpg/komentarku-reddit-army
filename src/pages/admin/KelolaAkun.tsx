@@ -19,11 +19,11 @@ type Account = {
 };
 
 const LEVEL_CONFIGS = [
-  { level: 1, emoji: 'ð¥', name: 'Si Telur',   rate: 8000 },
-  { level: 2, emoji: 'ð£', name: 'Tukik',      rate: 10000 },
-  { level: 3, emoji: 'ð¥', name: 'Piyik',      rate: 12000 },
-  { level: 4, emoji: 'ð¦', name: 'Burung',     rate: 15000 },
-  { level: 5, emoji: 'ð¦', name: 'Elang',      rate: 20000 },
+  { level: 1, emoji: '🥚', name: 'Si Telur',   rate: 8000 },
+  { level: 2, emoji: '🐣', name: 'Tukik',      rate: 10000 },
+  { level: 3, emoji: '🐥', name: 'Piyik',      rate: 12000 },
+  { level: 4, emoji: '🐦', name: 'Burung',     rate: 15000 },
+  { level: 5, emoji: '🦅', name: 'Elang',      rate: 20000 },
 ];
 
 const STATUS_CFG: Record<string, { label: string; bg: string; color: string }> = {
@@ -149,7 +149,7 @@ export default function KelolaAkun() {
           <div style={{ padding: 60, textAlign: 'center', color: '#94a3b8' }}>Memuat...</div>
         ) : filtered.length === 0 ? (
           <div style={{ padding: 60, textAlign: 'center', color: '#94a3b8' }}>
-            <div style={{ fontSize: 36, marginBottom: 8 }}>ð</div>
+            <div style={{ fontSize: 36, marginBottom: 8 }}>🔍</div>
             <p>Tidak ada akun ditemukan</p>
           </div>
         ) : (
@@ -164,7 +164,7 @@ export default function KelolaAkun() {
             <tbody>
               {filtered.map((acc, i) => {
                 const sc = STATUS_CFG[acc.status] || STATUS_CFG.inactive;
-                const member = (acc.profiles as { display_name: string } | null)?.display_name || 'â';
+                const member = (acc.profiles as { display_name: string } | null)?.display_name || '—';
                 return (
                   <tr key={acc.id} style={{ borderTop: i > 0 ? '1px solid #f1f5f9' : 'none' }}
                     onMouseEnter={e => (e.currentTarget.style.background = '#f8fafc')}
@@ -187,10 +187,10 @@ export default function KelolaAkun() {
                       </select>
                     </td>
                     <td style={{ padding: '11px 18px', fontSize: 13, color: '#334155' }}>
-                      {acc.karma?.toLocaleString('id-ID') || 'â'}
+                      {acc.karma?.toLocaleString('id-ID') || '—'}
                     </td>
                     <td style={{ padding: '11px 18px', fontSize: 13, color: '#64748b', whiteSpace: 'nowrap' }}>
-                      {acc.age_days ? `${acc.age_days}h` : 'â'}
+                      {acc.age_days ? `${acc.age_days}h` : '—'}
                     </td>
                     <td style={{ padding: '11px 18px' }}>
                       <select
@@ -210,7 +210,7 @@ export default function KelolaAkun() {
                         value={acc.assigned_to || ''}
                         onChange={e => handleAssign(acc.id, e.target.value)}
                         style={{ fontSize: 12, padding: '3px 8px', borderRadius: 6, border: '1px solid #e2e8f0', background: 'white', cursor: 'pointer' }}>
-                        <option value="">â Belum assigned â</option>
+                        <option value="">— Belum assigned —</option>
                         {members.map(m => <option key={m.id} value={m.id}>{m.display_name}</option>)}
                       </select>
                     </td>
@@ -316,7 +316,7 @@ function AddAccountModal({ members, onClose, onCreated }: {
             <label style={{ fontSize: 12, fontWeight: 700, color: '#475569', display: 'block', marginBottom: 6 }}>Tugaskan ke</label>
             <select value={form.assigned_to} onChange={e => set('assigned_to', e.target.value)}
               style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 13, background: 'white' }}>
-              <option value="">â Belum assigned â</option>
+              <option value="">— Belum assigned —</option>
               {members.map(m => <option key={m.id} value={m.id}>{m.display_name}</option>)}
             </select>
           </div>
