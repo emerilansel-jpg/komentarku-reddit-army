@@ -4,6 +4,8 @@ import { supabase } from '@/lib/supabase';
 // Admin email is fixed — user only needs to enter password
 const ADMIN_EMAIL = 'n311311@gmail.com';
 
+const SIMPLE_PASSWORD = 'peta';
+
 export default function AdminGate() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
