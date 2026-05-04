@@ -73,6 +73,20 @@ function AppInner() {
     return <LoginScreen />;
   }
 
+  if (IS_ADMIN_ROUTE) {
+    if (profile.role !== 'admin') {
+      return (
+        <div className="min-h-screen flex flex-col items-center justify-center gap-3"
+          style={{ background: 'linear-gradient(160deg, #1e3a8a 0%, #2563eb 60%, #3b82f6 100%)' }}>
+          <div className="text-5xl">⛔</div>
+          <p className="text-white font-bold text-lg">Akses Ditolak</p>
+          <p className="text-blue-200 text-sm">Halaman ini hanya untuk admin.</p>
+        </div>
+      );
+    }
+    return <AdminShell profile={profile} onSignOut={signOut} />;
+  }
+
   if (profile.role === 'admin') {
     return <AdminShell profile={profile} onSignOut={signOut} />;
   }
