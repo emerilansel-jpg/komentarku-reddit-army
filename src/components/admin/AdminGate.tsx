@@ -1,19 +1,21 @@
 import { useState } from 'react';
+import AdminShell from '../../pages/admin/AdminShell';
 
 const ADMIN_PASSWORD = 'peta';
 
-interface Props {
-  onSuccess: () => void;
-}
-
-export default function AdminGate({ onSuccess }: Props) {
+export default function AdminGate() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [unlocked, setUnlocked] = useState(false);
+
+  if (unlocked) {
+    return <AdminShell profile={{ id: 'admin', display_name: 'Admin', role: 'admin' }} />;
+  }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (password === ADMIN_PASSWORD) {
-      onSuccess();
+      setUnlocked(true);
     } else {
       setError('Password salah.');
     }
