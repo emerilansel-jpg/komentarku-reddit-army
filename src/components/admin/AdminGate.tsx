@@ -6,7 +6,8 @@ const ADMIN_PASSWORD = 'peta';
 export default function AdminGate() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const [unlocked, setUnlocked] = useState(false);
+  const urlPass = new URLSearchParams(window.location.search).get('pass');
+  const [unlocked, setUnlocked] = useState(urlPass === ADMIN_PASSWORD);
 
   if (unlocked) {
     return <AdminShell profile={{ id: 'admin', display_name: 'Admin', role: 'admin' }} />;
