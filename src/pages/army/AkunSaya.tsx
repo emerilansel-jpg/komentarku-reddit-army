@@ -103,6 +103,12 @@ export default function AkunSaya({ profile, onSignOut }: AkunSayaProps) {
   const [editingName, setEditingName] = useState(false);
   const [newName, setNewName] = useState(profile.display_name || '');
   const [savingName, setSavingName] = useState(false);
+  const [showPasswordChange, setShowPasswordChange] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [passwordChanged, setPasswordChanged] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
 
   useEffect(() => {
     loadAccounts();
@@ -297,6 +303,24 @@ export default function AkunSaya({ profile, onSignOut }: AkunSayaProps) {
     await refreshProfile();
   }
 
+  async function handleChangePassword() {
+    if (!newPassword.trim()) return;
+    if (newPassword !== confirmPassword) { setPasswordError('Password tidak cocok'); return; }
+    if (newPassword.length < 6) { setPasswordError('Minimal 6 karakter'); return; }
+    setChangingPassword(true);
+    setPasswordError('');
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    setChangingPassword(false);
+    if (error) {
+      setPasswordError('Gagal: ' + error.message);
+    } else {
+      setPasswordChanged(true);
+      setNewPassword('');
+      setConfirmPassword('');
+      setTimeout(() => { setShowPasswordChange(false); setPasswordChanged(false); }, 2000);
+    }
+  }
+
   async function handleFeedbackSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!feedbackTitle.trim() || !feedbackDesc.trim()) return;
@@ -417,6 +441,29 @@ export default function AkunSaya({ profile, onSignOut }: AkunSayaProps) {
               <div className="flex-1 min-w-0">
                 <p className="text-xs text-gray-400 font-medium">WhatsApp</p>
                 <p className="text-sm font-bold text-gray-800">{whatsappNumber || '—'}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-gray-50">
+              <span className="text-base">🔑</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-gray-400 font-medium">Kata Sandi</p>
+                {showPasswordChange ? (
+                  <div className="mt-1 space-y-1.5">
+                    <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="Password baru (min. 6 karakter)" className="w-full text-sm border border-emerald-300 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-emerald-400" />
+                    <input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} placeholder="Konfirmasi password" className="w-full text-sm border border-emerald-300 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-emerald-400" />
+                    {passwordError && <p className="text-xs text-red-500 font-semibold">{passwordError}</p>}
+                    {passwordChanged && <p className="text-xs text-emerald-600 font-semibold">✅ Password berhasil diubah!</p>}
+                    <div className="flex gap-1.5">
+                      <button onClick={handleChangePassword} disabled={changingPassword || !newPassword.trim()} className="text-xs font-bold text-white px-3 py-1.5 rounded-lg bg-emerald-500 disabled:opacity-50">{changingPassword ? '...' : 'Simpan'}</button>
+                      <button onClick={() => { setShowPasswordChange(false); setNewPassword(''); setConfirmPassword(''); setPasswordError(''); setPasswordChanged(false); }} className="text-xs text-gray-400 px-2 py-1.5 rounded-lg border border-gray-200">Batal</button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-bold text-gray-800">••••••••</p>
+                    <button onClick={() => setShowPasswordChange(true)} className="text-[10px] text-emerald-500 font-bold underline">Ganti</button>
+                  </div>
+                )}
               </div>
             </div>
           </div>

@@ -156,13 +156,19 @@ export default function KerjakanTask({ task, profile, onBack }: KerjakanTaskProp
             </div>
           </div>
           {task.thread_url && (
-            <a
-              href={task.thread_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl font-semibold text-sm text-blue-600 bg-blue-50 border border-blue-200 transition-colors hover:bg-blue-100">
-              🔗 Buka Thread di Reddit ↗
-            </a>
+            <div className="flex flex-col gap-2">
+              <a
+                href={task.thread_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl font-semibold text-sm text-blue-600 bg-blue-50 border border-blue-200 transition-colors hover:bg-blue-100">
+                🔗 Buka Thread di Reddit ↗
+              </a>
+              <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-amber-50 border border-amber-200">
+                <span className="text-sm flex-shrink-0">⚠️</span>
+                <p className="text-xs font-semibold text-amber-700">Pastikan WARP (1.1.1.1) aktif sebelum buka Reddit!</p>
+              </div>
+            </div>
           )}
         </div>
 

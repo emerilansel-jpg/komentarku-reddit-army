@@ -5,6 +5,7 @@ interface PenghasilanProps {
   profile: Profile;
   onWithdraw?: () => void;
 }
+type LoginBonus = { id: string; created_at: string; points: number; description: string };
 
 
 function formatRp(amount: number): string {
@@ -24,10 +25,12 @@ function formatDate(dateStr: string): string {
 
 export default function Penghasilan({ profile, onWithdraw }: PenghasilanProps) {
   const [earnings, setEarnings] = useState<Earning[]>([]);
+  const [loginBonuses, setLoginBonuses] = useState<LoginBonus[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadEarnings();
+    loadLoginBonuses();
   }, [profile.id]);
 
   // R17 — realtime referral bonus toast
@@ -59,6 +62,16 @@ export default function Penghasilan({ profile, onWithdraw }: PenghasilanProps) {
       .order('created_at', { ascending: false });
     if (data) setEarnings(data as Earning[]);
     setLoading(false);
+  }
+
+  async function loadLoginBonuses() {
+    const { data } = await supabase
+      .from('quick_wins')
+      .select('id, created_at, points, description')
+      .eq('user_id', profile.id)
+      .eq('event_type', 'login')
+      .order('created_at', { ascending: false });
+    if (data) setLoginBonuses(data as LoginBonus[]);
   }
 
   const currentMonth = new Date().getMonth();
@@ -186,11 +199,33 @@ export default function Penghasilan({ profile, onWithdraw }: PenghasilanProps) {
               {earnings.map((earning) => (
                 <EarningItem key={earning.id} earning={earning} />
               ))}
+              {loginBonuses.map((lb) => (
+                <LoginBonusItem key={lb.id} bonus={lb} />
+              ))}
             </div>
           )}
         </div>
       </div>
 
+    </div>
+  );
+}
+
+function LoginBonusItem({ bonus }: { bonus: LoginBonus }) {
+  const d = new Date(bonus.created_at);
+  const label = d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  return (
+    <div className="bg-white rounded-xl p-3.5 shadow-sm flex items-center gap-3" style={{ boxShadow: '0 1px 6px rgba(0,0,0,0.05)' }}>
+      <div className="w-10 h-10 rounded-xl flex items-center justify-center text-lg flex-shrink-0 bg-blue-50">
+        📅
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-semibold text-gray-800 truncate">Login Harian</p>
+        <p className="text-xs text-gray-400">{label} · <span className="text-blue-600 font-semibold">Bonus</span></p>
+      </div>
+      <div className="flex-shrink-0">
+        <p className="font-black text-sm text-blue-600">+Rp{bonus.points.toLocaleString('id-ID')}</p>
+      </div>
     </div>
   );
 }
