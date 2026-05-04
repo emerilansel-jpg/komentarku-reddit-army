@@ -1,30 +1,22 @@
 import { useState } from 'react';
-import { supabase } from '@/lib/supabase';
 
-// Admin email is fixed — user only needs to enter password
-const ADMIN_EMAIL = 'n311311@gmail.com';
+const ADMIN_PASSWORD = 'peta';
 
-const SIMPLE_PASSWORD = 'peta';
+interface Props {
+  onSuccess: () => void;
+}
 
-export default function AdminGate() {
+export default function AdminGate({ onSuccess }: Props) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
 
-  async function handleSubmit(e: React.FormEvent) {
+  function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!password.trim()) return;
-    setLoading(true);
-    setError('');
-    const { error: authErr } = await supabase.auth.signInWithPassword({
-      email: ADMIN_EMAIL,
-      password: password,
-    });
-    if (authErr) {
+    if (password === ADMIN_PASSWORD) {
+      onSuccess();
+    } else {
       setError('Password salah.');
-      setLoading(false);
     }
-    // On success: Supabase onAuthStateChange fires → App re-renders → AdminShell shown
   }
 
   return (
@@ -50,10 +42,10 @@ export default function AdminGate() {
           {error && <p className="text-red-300 text-sm text-center">{error}</p>}
           <button
             type="submit"
-            disabled={loading || !password.trim()}
+            disabled={!password.trim()}
             className="w-full bg-white text-blue-800 font-bold py-3 rounded-xl text-sm hover:bg-blue-50 transition-all disabled:opacity-50"
           >
-            {loading ? 'Masuk...' : 'Masuk →'}
+            Masuk →
           </button>
         </form>
       </div>
