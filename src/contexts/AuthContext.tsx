@@ -74,14 +74,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return error.message;
     }
     if (data.user) {
-      const { error: profileError } = await supabase.from('profiles').insert({
+      const { error: profileError } = await supabase.from('profiles').upsert({
         id: data.user.id,
         display_name: displayName,
         whatsapp_number: whatsappNumber || null,
         role: 'army',
         level: 1,
         referred_by_code: new URLSearchParams(window.location.search).get('ref'),
-      });
+      }, { onConflict: 'id' });
       if (profileError) {
         setLoading(false);
         return profileError.message;
