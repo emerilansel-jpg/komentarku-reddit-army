@@ -5,7 +5,8 @@ type Mode = 'login' | 'register';
 
 export default function LoginScreen() {
   const { signIn, signUp, loading } = useAuth();
-  const [mode, setMode] = useState<Mode>('login');
+  const initMode = new URLSearchParams(window.location.search).get('mode') as Mode;
+  const [mode, setMode] = useState<Mode>(initMode === 'register' ? 'register' : 'login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
