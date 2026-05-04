@@ -1,14 +1,14 @@
 import { type AdminPage } from '../../pages/admin/AdminShell';
 
 const NAV_ITEMS: { page: AdminPage; label: string; icon: string }[] = [
-  { page: 'dashboard',  label: 'Dashboard',    icon: 'ð ' },
-  { page: 'approvals',  label: 'Persetujuan',  icon: 'â' },
-  { page: 'accounts',   label: 'Akun Reddit',  icon: 'ð' },
-  { page: 'tasks',      label: 'Task Queue',   icon: 'ð' },
-  { page: 'team',       label: 'Tim',          icon: 'ð¥' },
-  { page: 'payroll',    label: 'Payroll',      icon: 'ð³' },
-  { page: 'feedback',   label: 'Feedback',     icon: 'ð¬' },
-  { page: 'settings',   label: 'Pengaturan',   icon: 'âï¸' },
+  { page: 'dashboard',  label: 'Dashboard',    icon: '🏠' },
+  { page: 'approvals',  label: 'Persetujuan',  icon: '✅' },
+  { page: 'accounts',   label: 'Akun Reddit',  icon: '🎭' },
+  { page: 'tasks',      label: 'Task Queue',   icon: '📋' },
+  { page: 'team',       label: 'Tim',          icon: '👥' },
+  { page: 'payroll',    label: 'Payroll',      icon: '💰' },
+  { page: 'feedback',   label: 'Feedback',     icon: '💬' },
+  { page: 'settings',   label: 'Pengaturan',   icon: '⚙️' },
 ];
 
 interface Props {
