@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { adminSupabase as supabase } from '../../lib/supabase';
 
 type MemberRow = {
@@ -31,7 +31,14 @@ export default function Tim() {
   const [inviteLink] = useState(`${window.location.origin}?invite=${Math.random().toString(36).slice(2, 10).toUpperCase()}`);
   const [inviteCopied, setInviteCopied] = useState(false);
 
-  useEffect(() => { loadMembers(); }, []);
+  const loadMembersCallback = useCallback(loadMembers, []);
+
+  useEffect(() => {
+    loadMembersCallback();
+    // Auto-refresh every 30 seconds to catch new registrations
+    const interval = setInterval(loadMembersCallback, 30000);
+    return () => clearInterval(interval);
+  }, [loadMembersCallback]);
 
   async function loadMembers() {
     setLoading(true);
@@ -93,11 +100,18 @@ export default function Tim() {
             <h1 className="text-xl font-black text-white">Tim 👥</h1>
             <p className="text-blue-300 text-xs">{members.length} anggota aktif</p>
           </div>
-          <button onClick={() => setShowInvite(true)}
-            className="px-3 py-2 rounded-xl text-xs font-bold text-white"
-            style={{ background: 'rgba(255,255,255,0.2)' }}>
-            + Undang
-          </button>
+          <div className="flex gap-2">
+            <button onClick={loadMembers} disabled={loading}
+              className="px-3 py-2 rounded-xl text-xs font-bold text-white"
+              style={{ background: 'rgba(255,255,255,0.15)' }}>
+              {loading ? '⏳' : '🔄'}
+            </button>
+            <button onClick={() => setShowInvite(true)}
+              className="px-3 py-2 rounded-xl text-xs font-bold text-white"
+              style={{ background: 'rgba(255,255,255,0.2)' }}>
+              + Undang
+            </button>
+          </div>
         </div>
       </div>
 
