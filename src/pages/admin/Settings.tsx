@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { supabase } from '../../lib/supabase';
+import { adminSupabase as supabase } from '../../lib/supabase';
 import { Settings2, Clock, TrendingUp, Save, CircleCheck as CheckCircle } from 'lucide-react';
 
 type AdminSettings = {

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { supabase } from '../../lib/supabase';
+import { adminSupabase as supabase } from '../../lib/supabase';
 
 interface Profile { id: string; display_name: string; role: string; }
 interface Props { profile: Profile; }

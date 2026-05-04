@@ -84,3 +84,13 @@ export type Earning = {
   paid_at: string | null;
   tasks?: Task;
 };
+
+// Admin-only client — no auth session, always queries as anon.
+// Use this in all admin pages so queries aren't affected by army user sessions.
+export const adminSupabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: false,
+    autoRefreshToken: false,
+    detectSessionInUrl: false,
+  },
+});
