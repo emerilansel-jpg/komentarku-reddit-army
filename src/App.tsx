@@ -10,11 +10,8 @@ import AkunSaya from './pages/army/AkunSaya';
 import Penghasilan from './pages/army/Penghasilan';
 import WithdrawForm from './pages/army/WithdrawForm';
 import AdminShell from './pages/admin/AdminShell';
-import AdminGate from './components/admin/AdminGate';
 import OnboardingFlow from './components/army/OnboardingFlow';
 import Leaderboard from './components/army/Leaderboard';
-
-const IS_ADMIN_ROUTE = window.location.pathname.startsWith('/peta-admin');
 
 function AppInner() {
   const { user, profile, loading, signOut } = useAuth();
@@ -22,27 +19,8 @@ function AppInner() {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [onboardingDone, setOnboardingDone] = useState(false);
 
-  // --- /peta-admin/ route ---
-  if (IS_ADMIN_ROUTE) {
-    if (loading) {
-      return (
-        <div
-          className="min-h-screen flex flex-col items-center justify-center"
-          style={{ background: 'linear-gradient(160deg, #1e3a8a 0%, #2563eb 60%, #3b82f6 100%)' }}
-        >
-          <div className="float-animation text-5xl mb-4">⚔️</div>
-          <p className="text-white font-bold text-lg">PeTa Admin</p>
-          <p className="text-blue-300 text-sm mt-1">Memuat...</p>
-        </div>
-      );
-    }
-    if (!user || !profile || profile.role !== 'admin') {
-      return <AdminGate />;
-    }
-    return <AdminShell profile={profile} onSignOut={signOut} />;
-  }
+  const isPetaAdmin = window.location.pathname === '/peta-admin';
 
-  // --- Normal army app flow ---
   if (loading) {
     return (
       <div
@@ -58,6 +36,23 @@ function AppInner() {
 
   if (!user || !profile) {
     return <LoginScreen />;
+  }
+
+  // /peta-admin route — hanya untuk role admin
+  if (isPetaAdmin) {
+    if (profile.role !== 'admin') {
+      return (
+        <div
+          className="min-h-screen flex flex-col items-center justify-center gap-3"
+          style={{ background: 'linear-gradient(160deg, #1e3a8a 0%, #2563eb 60%, #3b82f6 100%)' }}
+        >
+          <div className="text-5xl">⛔</div>
+          <p className="text-white font-bold text-lg">Akses Ditolak</p>
+          <p className="text-blue-200 text-sm">Halaman ini hanya untuk admin.</p>
+        </div>
+      );
+    }
+    return <AdminShell profile={profile} onSignOut={signOut} />;
   }
 
   if (profile.role === 'admin') {
